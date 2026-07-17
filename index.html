@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAA PC 遊戲 — 檢視層級重構原型 v4</title>
+<style>
+  :root {
+    --red: #FF0000; --black: #000000; --white: #FFFFFF; --surface: #FFFFFF; --line: #E5E5E5;
+    --ink: #000000; --ink60: rgba(0,0,0,.60); --ink40: rgba(0,0,0,.40); --ink25: rgba(0,0,0,.25);
+    --page-bg: #FAFAF9; --card-shadow: 0 1px 4px rgba(0,0,0,.07);
+    --pill-bg: #f9f9f9; --pill-border: #ddd; --pill-ink: #888;
+    --neutral: #9AA0A6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --red: #FF4433; --black: #F2F2F0; --white: #1B1B1A; --surface: #232322; --line: #383836;
+      --ink: #F2F2F0; --ink60: rgba(242,242,240,.64); --ink40: rgba(242,242,240,.42); --ink25: rgba(242,242,240,.25);
+      --page-bg: #141413; --card-shadow: 0 1px 4px rgba(0,0,0,.35);
+      --pill-bg: #2A2A28; --pill-border: #444; --pill-ink: #999; --neutral: #7A8085;
+    }
+  }
+  :root[data-theme="dark"] {
+    --red: #FF4433; --black: #F2F2F0; --white: #1B1B1A; --surface: #232322; --line: #383836;
+    --ink: #F2F2F0; --ink60: rgba(242,242,240,.64); --ink40: rgba(242,242,240,.42); --ink25: rgba(242,242,240,.25);
+    --page-bg: #141413; --card-shadow: 0 1px 4px rgba(0,0,0,.35);
+    --pill-bg: #2A2A28; --pill-border: #444; --pill-ink: #999; --neutral: #7A8085;
+  }
+  :root[data-theme="light"] {
+    --red: #FF0000; --black: #000000; --white: #FFFFFF; --surface: #FFFFFF; --line: #E5E5E5;
+    --ink: #000000; --ink60: rgba(0,0,0,.60); --ink40: rgba(0,0,0,.40); --ink25: rgba(0,0,0,.25);
+    --page-bg: #FAFAF9; --card-shadow: 0 1px 4px rgba(0,0,0,.07);
+    --pill-bg: #f9f9f9; --pill-border: #ddd; --pill-ink: #888; --neutral: #9AA0A6;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page-bg); color: var(--ink);
+    font-family: "Inter", "Noto Sans TC", "Helvetica Neue", Arial, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 40px; }
+
+  .compare-tag {
+    display: inline-flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 3px; padding: 4px 9px; margin-bottom: 18px;
+  }
+  .lang-toggle { display: flex; gap: 4px; text-transform: none; font-weight: 600; letter-spacing: 0; }
+  .lang-toggle button {
+    font-size: 11px; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--pill-border);
+    background: var(--surface); color: var(--ink60); cursor: pointer; font-family: inherit;
+  }
+  .lang-toggle button.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+
+  .slide { background: var(--surface); border: 1px solid var(--line); border-radius: 2px; padding: 40px 44px; position: relative; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+  h2.title { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0; color: var(--ink); }
+  .redrule { height: 3px; width: 100%; background: var(--red); margin: 14px 0 20px; }
+
+  /* ---- two-tier nav ---- */
+  .nav-block { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .nav-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nav-row-label { font-size: 12px; color: var(--ink60); margin-right: 4px; min-width: 44px; }
+  .mn-btn {
+    padding: 4px 12px; font-size: 12px; font-weight: 600; letter-spacing: .03em;
+    border: 1px solid var(--pill-border); border-radius: 3px; background: var(--pill-bg); color: var(--pill-ink);
+    cursor: pointer; font-family: inherit; transition: all .12s;
+  }
+  .mn-btn.mn-top { font-weight: 800; }
+  .mn-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .mn-btn:hover:not(.active) { background: var(--line); }
+  .mn-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  /* single row of 12 — shrink padding/font at narrower widths instead of wrapping to a 2nd row.
+     min-width:0 lets flex items shrink below their content size; white-space:nowrap stops
+     "10月"/"11月"/"12月" (3 chars) from wrapping onto two lines when squeezed. */
+  .month-grid-pills { display: flex; flex-wrap: nowrap; gap: 6px; }
+  .month-grid-pills .mn-btn { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  @media (max-width: 760px) {
+    .month-grid-pills { gap: 3px; }
+    .month-grid-pills .mn-btn { padding: 4px 1px; font-size: 10.5px; }
+  }
+
+  /* ---- summary bar (month view) ---- */
+  .summary-bar { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 20px; }
+  .summary-stat { display: flex; flex-direction: column; gap: 2px; }
+  .summary-stat .num { font-size: 22px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .summary-stat .num.accent { color: var(--red); }
+  .summary-stat .lbl { font-size: 11px; color: var(--ink60); letter-spacing: .03em; }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .currency-group { display: flex; align-items: center; gap: 8px; }
+  .currency-label { font-size: 12px; color: var(--ink); }
+  .price-btn { font-size: 11px; padding: 3px 10px; border: 1px solid var(--pill-border); border-radius: 4px; background: var(--surface); color: var(--ink60); cursor: pointer; font-family: inherit; }
+  .price-btn.active { background: #333; color: #fff; font-weight: 600; border-color: #333; }
+  .legend-row { display: flex; gap: 16px; font-size: 11px; color: var(--ink); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-badge { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: #fff; font-size: 8px; font-weight: 800; border-radius: 2px; }
+
+  /* ---- overview grids (year: 6x2, half-year: 3x2) — neutral, non-positional color ---- */
+  /* align-items:start — a month with few/no games sits flush at the top of its row
+     instead of being stretched to match a busier neighbor (e.g. Oct with 7 releases). */
+  .overview-grid { display: grid; gap: 12px; margin-top: 4px; align-items: start; }
+  .overview-grid.g-year { grid-template-columns: repeat(6, 1fr); }
+  .overview-grid.g-half { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 1000px) {
+    .overview-grid.g-year { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .overview-grid.g-half { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .overview-grid.g-year { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .month-block {
+    display: block; width: 100%; box-sizing: border-box; margin: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 14px 16px; cursor: pointer; text-align: left; font-family: inherit; color: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+  }
+  .month-block { border-top: 3px solid var(--q-color, var(--neutral)); }
+  .month-block:hover { transform: translateY(-1px); box-shadow: var(--card-shadow); }
+  .month-block:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  .mb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .mb-head-left { display: flex; align-items: center; gap: 8px; }
+  .mb-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--q-color, var(--neutral)); flex-shrink: 0; }
+  .mb-head .mb-month { font-size: 15px; font-weight: 800; color: var(--ink); background: none; border: none; padding: 0; font-family: inherit; cursor: pointer; text-align: left; }
+  .mb-head .mb-month:hover { color: var(--q-color, var(--red)); }
+  .mb-count {
+    font-size: 10.5px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums;
+    background: var(--q-color, var(--ink40)); min-width: 18px; height: 18px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 5px;
+  }
+
+  .mb-empty { font-size: 11.5px; color: var(--ink40); padding: 6px 0; letter-spacing: .03em; }
+
+  /* year mode: single-line date+name+badges — price dropped, this view is for
+     scanning volume/pattern, not comparing prices (that's what month view is for). */
+  .mb-row-year {
+    display: flex; align-items: baseline; gap: 6px; padding: 4px 0 4px 8px; flex-wrap: wrap;
+    border-bottom: 1px dotted var(--line); border-left: 2px solid var(--q-color, var(--neutral));
+  }
+  .mb-row-year:last-child { border-bottom: none; }
+  .mb-row-year .g-date { font-size: 10px; color: var(--ink40); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .mb-row-year .g-name { font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .mb-row-year .mini-badges { display: inline-flex; gap: 2px; margin-left: auto; }
+
+  /* half-year mode: a bit roomier — date, name, price, tags on two lines */
+  .mb-row-half { padding: 7px 0 7px 8px; border-bottom: 1px dotted var(--line); border-left: 2px solid var(--q-color, var(--neutral)); }
+  .mb-row-half:last-child { border-bottom: none; }
+  .mb-row-half .row-top { display: flex; align-items: baseline; gap: 7px; }
+  .mb-row-half .g-date { font-size: 10.5px; color: var(--ink40); font-variant-numeric: tabular-nums; }
+  .mb-row-half .g-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .mb-row-half .row-bottom { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .mb-row-half .g-price { font-size: 10.5px; color: var(--ink60); font-variant-numeric: tabular-nums; }
+
+  .mini-badge { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 2px; color: #fff; font-size: 7.5px; font-weight: 800; flex-shrink: 0; }
+  .mini-badge-wide { display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; height: 13px; border-radius: 2px; color: #fff; font-size: 7.5px; font-weight: 800; flex-shrink: 0; }
+  .mini-rec { font-size: 11px; }
+
+  /* ---- month view: large cards ---- */
+  /* Flex-column layout (NOT absolute positioning) — content flows top-down, the
+     footer (badges + rec) and button are pushed to the bottom with margin-top:auto,
+     so nothing overlaps no matter how many lines the game name wraps to. */
+  .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-bottom: 8px; align-items: stretch; }
+  .game-card {
+    display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line);
+    border-top: 4px solid var(--red); border-radius: 6px; padding: 12px 13px 13px; box-shadow: var(--card-shadow);
+    cursor: pointer; transition: border-color .12s ease, transform .1s ease;
+  }
+  .game-card:hover { transform: translateY(-1px); border-color: var(--ink40); }
+  .game-card .g-date { font-size: 11.5px; color: var(--ink40); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+  .game-card .g-name { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+  .game-card .g-genre { font-size: 11.5px; color: var(--ink60); margin-top: 3px; }
+  .game-card .g-price { margin-top: 6px; font-size: 12px; color: var(--ink60); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .game-card .g-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 12px; min-height: 19px; }
+  .game-card .g-badges { display: flex; gap: 5px; }
+  .badge { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px; border-radius: 3px; color: #fff; font-size: 10px; font-weight: 800; }
+  .badge-wide { display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; height: 19px; border-radius: 3px; color: #fff; font-size: 10px; font-weight: 800; }
+  .g-rec { font-size: 18px; line-height: 1; margin-left: auto; }
+  .g-detail-btn {
+    margin-top: 10px; width: 100%; font-size: 11px; font-weight: 700;
+    padding: 7px 0; border-radius: 4px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink);
+    cursor: pointer; font-family: inherit; letter-spacing: .02em;
+  }
+  .g-detail-btn:hover { background: var(--ink); color: var(--surface); }
+
+  .insight {
+    font-size: 14.5px; line-height: 1.6; color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+    border-left: 3px solid var(--red); padding: 12px 16px; margin-top: 20px; border-radius: 0 2px 2px 0;
+  }
+  .insight .stat { color: var(--red); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* ---- master-detail: single game deep-dive ---- */
+  .detail-list { display: flex; flex-direction: column; gap: 24px; min-width: 0; margin-top: 8px; }
+  .detail-card {
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 28px 30px 24px; scroll-margin-top: 20px;
+  }
+  .detail-back {
+    font-size: 11.5px; font-weight: 700; color: var(--ink60); background: none; border: none; cursor: pointer;
+    font-family: inherit; padding: 0; margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .detail-back:hover { color: var(--red); }
+
+  /* ---- header: matches production "spot" slide exactly (month chip + eyebrow + title) ---- */
+  .dc-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
+  .dc-month-chip {
+    width: 50px; height: 50px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  }
+  .dc-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--red); margin-bottom: 3px; }
+  .dc-title { font-size: 21px; font-weight: 800; color: var(--ink); margin: 0; }
+  .dc-title .dc-title-alt { font-size: 15px; font-weight: 500; color: var(--ink60); margin-left: 6px; }
+  .dc-redrule { height: 3px; width: 100%; background: var(--red); margin: 12px 0 20px; }
+
+  /* ---- cover + meta table ---- */
+  .dc-top { display: flex; gap: 26px; flex-wrap: wrap; }
+  .dc-cover {
+    width: 46%; min-width: 260px; aspect-ratio: 16/9; border-radius: 6px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--neutral), var(--line)); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--ink40); font-size: 12px; letter-spacing: .05em;
+  }
+  .dc-meta { flex: 1; min-width: 260px; display: flex; flex-direction: column; }
+  .dc-meta-row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .dc-meta-row:last-child { border-bottom: none; }
+  .dc-meta-label { font-size: 12px; color: var(--ink60); }
+  .dc-meta-value { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .dc-meta-row.dc-rtx50 .dc-meta-label, .dc-meta-row.dc-rt .dc-meta-label, .dc-meta-row.dc-dlss .dc-meta-label { color: var(--ink40); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+
+  /* ---- 遊戲簡介 ---- */
+  .dc-desc-box { margin-top: 22px; background: var(--pill-bg); border-radius: 6px; padding: 16px 18px; }
+  .dc-desc-head { font-size: 12px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
+  .dc-desc-text { font-size: 13.5px; line-height: 1.75; color: var(--ink); }
+
+  /* ---- 市場分析 / RTX 50 建議 ---- */
+  .dc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 700px) { .dc-two-col { grid-template-columns: 1fr; } }
+  .dc-analysis-box { border: 1px solid var(--line); border-left: 3px solid var(--neutral); border-radius: 4px; padding: 14px 16px; }
+  .dc-analysis-box.dc-rtx50-box { border-left-color: #2E7D32; }
+  .dc-analysis-head { font-size: 12px; font-weight: 800; margin-bottom: 8px; color: var(--ink); }
+  .dc-rtx50-box .dc-analysis-head { color: #2E7D32; }
+  .dc-analysis-text { font-size: 13px; line-height: 1.75; color: var(--ink); }
+
+  /* ---- prev / next within month ---- */
+  .dc-step-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .dc-step {
+    font-size: 12px; font-weight: 700; color: var(--ink60); background: var(--pill-bg);
+    border: 1px solid var(--pill-border); border-radius: 6px; padding: 8px 14px; cursor: pointer; font-family: inherit;
+    max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dc-step:hover { background: var(--line); color: var(--ink); }
+  .dc-step:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .detail-card:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+  .empty-view { padding: 60px 0; text-align: center; color: var(--ink40); font-size: 14px; letter-spacing: .03em; }
+
+  .callout {
+    margin-top: 28px; padding: 12px 16px; border-radius: 4px; font-size: 13px; line-height: 1.7;
+    background: color-mix(in srgb, var(--red) 6%, var(--surface)); border-left: 3px solid var(--red);
+  }
+  .callout b { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="compare-tag">
+    檢視層級重構原型 v4・年 / 半年 / 單月 / 詳細頁
+    <span class="lang-toggle" id="langToggle">
+      <button data-lang="zh-tw" class="active">中文</button>
+      <button data-lang="en">EN</button>
+    </span>
+  </span>
+
+  <div class="slide">
+    <div class="eyebrow" id="eyebrowText"></div>
+    <h2 class="title" id="pageTitle"></h2>
+    <div class="redrule"></div>
+
+    <div class="nav-block">
+      <div class="nav-row">
+        <span class="nav-row-label" id="navYearLabel"></span>
+        <div id="topPills" style="display:flex; gap:6px;"></div>
+      </div>
+      <div class="nav-row">
+        <span class="nav-row-label" id="navMonthLabel"></span>
+        <div class="month-grid-pills" id="monthPills"></div>
+      </div>
+    </div>
+
+    <div id="summaryBarSlot"></div>
+
+    <div class="toolbar">
+      <div class="currency-group">
+        <span class="currency-label" id="currencyLabel">Currency:</span>
+        <button class="price-btn active" data-mode="USD">USD</button>
+        <button class="price-btn" data-mode="NTD">NTD</button>
+      </div>
+      <div class="legend-row" id="legendRow"></div>
+    </div>
+
+    <div id="viewSlot"></div>
+
+    <div class="insight" id="insightBox"></div>
+  </div>
+
+  <div id="detailAreaWrap"></div>
+
+  <div class="callout" id="changeNote"></div>
+</div>
+
+<script>
+/* =========================================================
+   Data
+========================================================= */
+const GAMES_RAW = [
+  { date:"2026-01-16", name_zh:"inZOI", name_en:"inZOI", genre_zh:"生活模擬", genre_en:"Life Sim", dev:"Krafton", usd:"$39.99", ntd:"NT$990", rt:true, dlss:true, rec:false },
+  { date:"2026-02-26", name_zh:"惡靈古堡：安魂曲", name_en:"Resident Evil: Requiem", genre_zh:"生存恐怖", genre_en:"Survival Horror", dev:"Capcom", usd:"$69.99", ntd:"NT$1,690", rt:true, dlss:true, rec:true },
+  { date:"2026-02-27", name_zh:"Marathon", name_en:"Marathon", genre_zh:"多人射擊", genre_en:"Multiplayer Shooter", dev:"Bungie", usd:"$39.99", ntd:"NT$1,190", rt:true, dlss:true, rec:false },
+  { date:"2026-03-02", name_zh:"魔獸世界：至暗之夜", name_en:"World of Warcraft: Midnight", genre_zh:"MMORPG", genre_en:"MMORPG", dev:"Blizzard", usd:"$49.99", ntd:"NT$1,490", rt:true, dlss:false, rec:true, msi:true },
+  { date:"2026-03-12", name_zh:"約翰·卡本特的毒物突擊隊", name_en:"John Carpenter's Toxic Commando", genre_zh:"合作射擊", genre_en:"Co-op Shooter", dev:"Saber Interactive", usd:"$39.99", ntd:"NT$990", rt:false, dlss:true, rec:false },
+  { date:"2026-03-19", name_zh:"赤色荒漠", name_en:"Crimson Desert", genre_zh:"動作RPG", genre_en:"Action RPG", dev:"Pearl Abyss", usd:"$69.99", ntd:"NT$1,890", rt:true, dlss:true, rec:false },
+  { date:"2026-03-19", name_zh:"死亡擱淺2：冥灘之上", name_en:"Death Stranding 2", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"Kojima Productions", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:true, rec:true },
+  { date:"2026-04-10", name_zh:"王者榮耀：世界", name_en:"Honor of Kings: World", genre_zh:"開放世界ARPG", genre_en:"Open-world ARPG", dev:"TiMi Studio", usd:"Free", ntd:"免費", rt:true, dlss:true, rec:true },
+  { date:"2026-04-16", name_zh:"PRAGMATA", name_en:"PRAGMATA", genre_zh:"科幻動作", genre_en:"Sci-fi Action", dev:"Capcom", usd:"$59.99", ntd:"NT$1,790", rt:true, dlss:true, rec:true },
+  { date:"2026-04-28", name_zh:"暗黑破壞神 IV：仇恨之主", name_en:"Diablo IV: Lord of Hatred", genre_zh:"動作RPG", genre_en:"Action RPG", dev:"Blizzard", usd:"$39.99", ntd:"NT$1,190", rt:true, dlss:true, rec:true },
+  { date:"2026-05-14", name_zh:"深海迷航 2", name_en:"Subnautica 2", genre_zh:"生存探索", genre_en:"Survival Exploration", dev:"Unknown Worlds", usd:"$29.99", ntd:"NT$699", rt:true, dlss:true, rec:false },
+  { date:"2026-05-19", name_zh:"極限競速：地平線 6", name_en:"Forza Horizon 6", genre_zh:"競速", genre_en:"Racing", dev:"Playground Games", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:true, rec:false },
+  { date:"2026-05-23", name_zh:"樂高蝙蝠俠：黑暗騎士傳承", name_en:"LEGO Batman: Legacy of the Dark Knight", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"TT Games", usd:"$69.99", ntd:"NT$1,890", rt:true, dlss:true, rec:false },
+  { date:"2026-05-25", name_zh:"Paralives", name_en:"Paralives", genre_zh:"生活模擬", genre_en:"Life Sim", dev:"Paralives Studio", usd:"$31.99", ntd:"NT$599", rt:false, dlss:false, rec:false },
+  { date:"2026-05-27", name_zh:"007：初現曙光", name_en:"007 First Light", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"IO Interactive", usd:"$69.99", ntd:"NT$1,790", rt:false, dlss:true, rec:false, nv:true },
+  { date:"2026-06-05", name_zh:"救世英豪 重製版", name_en:"Fable Remastered", genre_zh:"動作RPG", genre_en:"Action RPG", dev:"Playground Games", usd:"$49.99", ntd:"NT$1,390", rt:false, dlss:true, rec:false },
+  { date:"2026-07-09", name_zh:"刺客教條：黑旗 同步重置", name_en:"Assassin's Creed Black Flag Resync", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"Ubisoft", usd:"$59.99", ntd:"NT$1,690", rt:true, dlss:true, rec:true },
+  { date:"2026-07-28", name_zh:"最後一戰：戰役進化", name_en:"Halo: Campaign Evolved", genre_zh:"射擊", genre_en:"Shooter", dev:"343 Industries", usd:"$49.99", ntd:"NT$1,490", rt:false, dlss:true, rec:true },
+  { date:"2026-08-03", name_zh:"輪迴之獸", name_en:"Wuchang: Fallen Feathers", genre_zh:"魂系動作", genre_en:"Soulslike", dev:"Leenzee", usd:"$59.99", ntd:"NT$1,790", rt:false, dlss:false, rec:true },
+  { date:"2026-08-06", name_zh:"MARVEL 鬥魂：格鬥之魂", name_en:"Marvel Fighting Soul", genre_zh:"格鬥", genre_en:"Fighting", dev:"Marvel Games", usd:"$59.99", ntd:"NT$1,790", rt:false, dlss:false, rec:true },
+  { date:"2026-08-27", name_zh:"瘟疫傳說：共鳴", name_en:"A Plague Tale: Resonance", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"Asobo Studio", usd:"$49.99", ntd:"NT$1,390", rt:false, dlss:false, rec:true },
+  { date:"2026-08-27", name_zh:"STAR WARS 零號連隊", name_en:"Star Wars Zero Company", genre_zh:"戰術策略", genre_en:"Tactical Strategy", dev:"Respawn", usd:"$49.99", ntd:"NT$1,499", rt:false, dlss:false, rec:true },
+  { date:"2026-08-27", name_zh:"潛龍諜影 Master Collection Vol.2", name_en:"MGS Master Collection Vol.2", genre_zh:"動作潛行", genre_en:"Action Stealth", dev:"Konami", usd:"$49.99", ntd:"NT$1,190", rt:false, dlss:false, rec:false },
+  { date:"2026-09-03", name_zh:"黎明行者之血", name_en:"Blood of Dawnwalker", genre_zh:"動作RPG", genre_en:"Action RPG", dev:"Rebel Wolves", usd:"$69.99", ntd:"NT$1,990", rt:false, dlss:true, rec:true },
+  { date:"2026-09-03", name_zh:"鬼武者 Way of the Sword", name_en:"Onimusha: Way of the Sword", genre_zh:"動作", genre_en:"Action", dev:"Capcom", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:true, rec:false },
+  { date:"2026-09-17", name_zh:"戰鎚：破曉之戰 4", name_en:"Warhammer 40K: Dawn of War 4", genre_zh:"即時戰略", genre_en:"RTS", dev:"Relic", usd:"$59.99", ntd:"NT$1,749", rt:false, dlss:false, rec:false },
+  { date:"2026-09-24", name_zh:"控制：共振", name_en:"Control: Resonance", genre_zh:"動作冒險", genre_en:"Action Adventure", dev:"Remedy", usd:"$39.99", ntd:"NT$1,079", rt:true, dlss:true, rec:true },
+  { date:"2026-09-24", name_zh:"沉默之丘：隕落小鎮", name_en:"Silent Hill: Fallen Town", genre_zh:"生存恐怖", genre_en:"Survival Horror", dev:"Konami", usd:"$49.99", ntd:"NT$1,390", rt:false, dlss:true, rec:false },
+  { date:"2026-10-01", name_zh:"雷曼傳奇：重塑版", name_en:"Rayman Legends Reforged", genre_zh:"平台動作", genre_en:"Platformer", dev:"Ubisoft", usd:"$39.99", ntd:"NT$1,190", rt:false, dlss:false, rec:false },
+  { date:"2026-10-02", name_zh:"皇牌空戰8：希孚之翼", name_en:"Ace Combat 8: Skies of Shifu", genre_zh:"飛行射擊", genre_en:"Flight Combat", dev:"Bandai Namco", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:false, rec:true },
+  { date:"2026-10-06", name_zh:"戰爭機器：E-Day", name_en:"Gears of War: E-Day", genre_zh:"射擊", genre_en:"Shooter", dev:"The Coalition", usd:"TBA", ntd:"未定", rt:true, dlss:true, rec:true },
+  { date:"2026-10-08", name_zh:"王國之心 合輯 [I~III]", name_en:"Kingdom Hearts Collection I-III", genre_zh:"動作RPG合輯", genre_en:"Action RPG Collection", dev:"Square Enix", usd:"$59.99", ntd:"NT$1,749", rt:false, dlss:false, rec:false },
+  { date:"2026-10-09", name_zh:"龍族教義 2：黑暗覺者", name_en:"Dragon's Dogma 2: Dark Awakening", genre_zh:"開放世界ARPG", genre_en:"Open-world ARPG", dev:"Capcom", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:true, rec:true },
+  { date:"2026-10-23", name_zh:"決勝時刻4：現代戰爭", name_en:"Call of Duty 4: Modern Warfare", genre_zh:"射擊", genre_en:"Shooter", dev:"Infinity Ward", usd:"$69.99", ntd:"NT$1,990", rt:true, dlss:true, rec:true },
+  { date:"2026-10-29", name_zh:"影之刃零", name_en:"Shadow Blade Zero", genre_zh:"動作", genre_en:"Action", dev:"S-Game", usd:"TBA", ntd:"未定", rt:true, dlss:true, rec:true }
+];
+
+// slugify english name for a stable, collision-safe id — fixes the "spot-${date}" duplicate-day bug
+function slugify(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+const GAMES = GAMES_RAW.map(g => ({ ...g, id: `spot-${g.date}-${slugify(g.name_en)}` }));
+
+// Year-wide RT+DLSS baseline — used only as a comparison anchor in month-level
+// analysis ("higher/lower than the annual average"), computed once from the full dataset.
+const YEAR_RTDLSS_PCT = Math.round(
+  (GAMES.filter(g => g.rt && g.dlss).length / GAMES.length) * 100
+);
+
+// Open-world → SSD (storage capacity) association. Tightened to match only genre
+// tags that literally say "open world" (not RPG/adventure broadly) so the trigger
+// condition matches exactly what the output sentence claims — no over-firing on
+// titles whose genre tag merely resembles "long-form" without being open-world.
+const isLongForm = g => /開放世界/.test(g.genre_zh) || /open[\s-]?world/i.test(g.genre_en || "");
+// MMORPG → peripheral association is explicitly a genre-level inference (see buildInsight),
+// not a verified spec/data association — flagged as such wherever it's used.
+const isMMO = g => g.genre_zh === "MMORPG" || /MMORPG/i.test(g.genre_en || "");
+
+/* =========================================================
+   Placeholder deep-detail content generator
+   (Prototype note: production would source these from the real
+   D.aaaGames record — description / market analysis / specs /
+   RTX 50 marketing angle / requirement screenshots.)
+========================================================= */
+function detailContent(g, lang) {
+  const zh = lang !== "en";
+  // GPU-pair spec rows + RTX 50 pick, styled after the production "spot" slide
+  // (最低規格(STEAM) / 建議規格(STEAM) / RTX 50 建議 rows) — placeholder pairings,
+  // production will source the real Steam-listed min/rec GPUs per title.
+  const minSpec = g.rt ? "RTX 2070 / RX 6700 XT" : "GTX 1660 / RX 5600 XT";
+  const recSpec = g.rt ? "RTX 3070 Ti / RX 6800 XT" : "RTX 4060 / RX 7600";
+  const rtx50Model = g.rt && g.dlss ? "RTX 5080" : (g.rt || g.dlss ? "RTX 5070" : "RTX 5060");
+  const dlssVer = g.dlss ? "DLSS 4.5" : "N/A";
+
+  return {
+    desc: zh
+      ? `${g.name_zh} 由 ${g.dev} 打造，屬於${g.genre_zh}類作品，預計於 ${fmtLong(g.date,"zh-tw")} 正式發售。（此為原型佔位文字，正式版將串接實際遊戲簡介資料。）`
+      : `${g.name_en}, developed by ${g.dev}, is a ${g.genre_en} title launching ${fmtLong(g.date,"en")}. (Prototype placeholder — production will pull the real synopsis.)`,
+    market: zh
+      ? `本作在發售當週具備高關注度。最低規格要求 ${minSpec}，${g.rt ? "支援 Ray Tracing，潛在受眾涵蓋中高階顯卡族群" : "未支援 Ray Tracing，排除部分追求光追體驗的玩家"}。（佔位分析）`
+      : `High launch-week visibility expected. Minimum spec requires ${minSpec}; ${g.rt ? "Ray Tracing support broadens appeal to mid-to-high-end GPU owners" : "no Ray Tracing support narrows the enthusiast segment"}. (placeholder analysis)`,
+    rtx50: zh
+      ? `官方建議規格對應 RTX 50 系列為 ${rtx50Model}。${g.dlss ? `原生支援 ${dlssVer}，` : ""}MSI ${rtx50Model} ${g.dlss ? `以 ${dlssVer} 輕鬆駕馭高畫質體驗` : "提供充裕效能餘裕"}${g.rt ? "，同時支援 Ray Tracing 完整畫面表現" : "（本作不支援 Ray Tracing）"}。`
+      : `Official recommended spec maps to the RTX 50 series as ${rtx50Model}. ${g.dlss ? `Native ${dlssVer} support ` : ""}lets the MSI ${rtx50Model} ${g.dlss ? "drive high-fidelity visuals with ease" : "deliver ample headroom"}${g.rt ? ", with full Ray Tracing fidelity" : " (Ray Tracing not supported)"}.`,
+    minSpec, recSpec, rtx50Model, dlssVer
+  };
+}
+
+/* =========================================================
+   State
+========================================================= */
+let AAA_VIEW_MODE = "year";   // "year" | "h1" | "h2" | "month"
+let AAA_YEAR = 2026;
+let AAA_MONTH = null;         // "2026-03" when in month mode
+let priceMode = "USD";
+let LANG = "zh-tw";
+let activeDetailId = null;    // master-detail: which game's detail is open within the month (null = index/grid)
+let lastTriggerId = null;     // remembers which card opened the detail, so focus can return there
+
+// Respect the viewer's reduced-motion setting — no forced smooth-scroll for
+// vestibular-sensitive users.
+const reduceMotion = () =>
+  window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function scrollToTop(el) {
+  el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+}
+// Move keyboard focus to a freshly-shown region without scrolling twice.
+function focusRegion(el) {
+  if (!el) return;
+  el.setAttribute("tabindex", "-1");
+  el.focus({ preventScroll: true });
+}
+
+function setAaaView(mode, monthStr) {
+  AAA_VIEW_MODE = mode;
+  AAA_MONTH = monthStr || null;
+  activeDetailId = null;
+  lastTriggerId = null;
+  renderAaa();
+  document.querySelector(".slide").scrollIntoView({ behavior: "instant", block: "start" });
+}
+
+// Master-detail transitions inside a month (index <-> single detail)
+function openDetail(id) {
+  lastTriggerId = id;
+  activeDetailId = id;
+  renderAaa();
+  const card = document.querySelector("[data-detail-card]");
+  scrollToTop(document.querySelector(".slide"));
+  focusRegion(card);
+}
+function closeDetail() {
+  const returnTo = lastTriggerId;
+  activeDetailId = null;
+  renderAaa();
+  scrollToTop(document.querySelector(".slide"));
+  // return focus to the card the user came from
+  const btn = returnTo && document.querySelector(`.g-detail-btn[data-detail-id="${returnTo}"]`);
+  focusRegion(btn || document.querySelector(".game-card"));
+}
+
+function getAaaMonths(year) {
+  return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
+}
+
+function gamesInMonth(ym) {
+  return GAMES.filter(g => g.date.startsWith(ym)).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Quarter colors — now permanently tied to real calendar quarters (Q1/Q2/Q3/Q4),
+// not to "whichever window happens to be showing", so there's no repetition-driven
+// color mismatch. Restores the original page's visual identity safely.
+const QUARTER_COLORS = ["#E67E22", "#8E44AD", "#00A8FF", "#C0392B"];
+const colorForMonth = monthNum => QUARTER_COLORS[Math.floor((monthNum - 1) / 3)];
+
+const fmtShort = d => { const [, m, day] = d.split("-"); return `${m}.${day}`; };
+const MONTH_NUM_ZH = n => `${n}月`;
+const MONTH_NUM_EN = n => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][n-1];
+const MONTH_ABBR3 = n => ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][n-1];
+const fmtLong = (d, lang) => {
+  const [y, m, day] = d.split("-").map(Number);
+  return lang === "en" ? `${MONTH_NUM_EN(m)} ${day}, ${y}` : `${y}年${m}月${day}日`;
+};
+
+/* =========================================================
+   i18n strings
+========================================================= */
+const STR = {
+  "zh-tw": {
+    eyebrow: "PART 4 · 3A PC 遊戲發售時程表",
+    yearNav: "2026年", monthNav: "月份",
+    year: "全年", h1: "上半年", h2: "下半年",
+    currency: "幣別：",
+    total: "本月總數", rtCount: "支援 RT", dlssCount: "支援 DLSS", recCount: "編輯推薦",
+    legendRt: "Ray Tracing", legendDlss: "DLSS", legendNv: "NVIDIA 綁定", legendMsi: "MSI 合作", legendRec: "市場熱度推薦",
+    emptyMonth: "本月暫無排程",
+    viewFull: "查看完整分析", backToMonth: "← 返回本月遊戲",
+    sideNavHead: "本月遊戲",
+    titleYear: y => `${y}年 AAA PC 遊戲發售總覽`,
+    titleH1: y => `${y}年上半年 AAA PC 遊戲`,
+    titleH2: y => `${y}年下半年 AAA PC 遊戲`,
+    titleMonth: (y, m, n) => `${y}年${m}月 AAA PC 遊戲｜${n}款新作`,
+    devLabel: "開發／發行商", genreLabel: "類型", priceLabel: "售價",
+    releaseDateLabel: "上市日期", rtx50PickLabel: "RTX 50 建議", rayTracingLabel: "RAY TRACING",
+    descHead: "遊戲簡介", marketHead: "市場分析", rtx50Head: "RTX 50 建議", specHead: "系統需求", reqImgHead: "PC 系統需求圖片",
+    minSpecLbl: "最低規格 (STEAM)", recSpecLbl: "建議規格 (STEAM)"
+  },
+  en: {
+    eyebrow: "PART 4 · AAA PC Game Release Timeline",
+    yearNav: "2026", monthNav: "Month",
+    year: "Full Year", h1: "H1", h2: "H2",
+    currency: "Currency:",
+    total: "Releases", rtCount: "Ray Tracing", dlssCount: "DLSS", recCount: "Recommended",
+    legendRt: "Ray Tracing", legendDlss: "DLSS", legendNv: "NVIDIA Bundle", legendMsi: "MSI Collab", legendRec: "Market Heat Recommendation",
+    emptyMonth: "No releases scheduled this month",
+    viewFull: "View Full Analysis", backToMonth: "← Back to this month",
+    sideNavHead: "This Month",
+    titleYear: y => `${y} AAA PC Game Release Overview`,
+    titleH1: y => `${y} H1 AAA PC Games`,
+    titleH2: y => `${y} H2 AAA PC Games`,
+    titleMonth: (y, m, n) => `${MONTH_NUM_EN(m)} ${y} AAA PC Games | ${n} Releases`,
+    devLabel: "Developer / Publisher", genreLabel: "Genre", priceLabel: "Price",
+    releaseDateLabel: "Release Date", rtx50PickLabel: "RTX 50 PICK", rayTracingLabel: "RAY TRACING",
+    descHead: "Overview", marketHead: "Market Analysis", rtx50Head: "RTX 50 Recommendation", specHead: "System Requirements", reqImgHead: "PC Requirements Screenshot",
+    minSpecLbl: "Minimum (Steam)", recSpecLbl: "Recommended (Steam)"
+  }
+};
+const t = k => STR[LANG][k];
+
+/* =========================================================
+   Card / row builders
+========================================================= */
+function miniBadges(g) {
+  const rt = g.rt ? `<span class="mini-badge" style="background:#1565C0;">R</span>` : "";
+  const dlss = g.dlss ? `<span class="mini-badge" style="background:#1B5E20;">D</span>` : "";
+  const nv = g.nv ? `<span class="mini-badge-wide" style="background:#76B900;">NV</span>` : "";
+  const msi = g.msi ? `<span class="mini-badge-wide" style="background:#EB1D24;">MSI</span>` : "";
+  const rec = g.rec ? `<span class="mini-rec">👍</span>` : "";
+  return `${rt}${dlss}${nv}${msi}${rec}`;
+}
+
+function yearRowHtml(g) {
+  const name = LANG === "en" ? g.name_en : g.name_zh;
+  // Year view = quick scan, not shopping — price dropped here, still shown in
+  // month/half-year/detail views where it's actually decision-relevant.
+  return `<div class="mb-row-year">
+    <span class="g-date">${fmtShort(g.date)}</span>
+    <span class="g-name">${name}</span>
+    <span class="mini-badges">${miniBadges(g)}</span>
+  </div>`;
+}
+
+function halfRowHtml(g) {
+  const name = LANG === "en" ? g.name_en : g.name_zh;
+  const price = priceMode === "USD" ? g.usd : g.ntd;
+  return `<div class="mb-row-half">
+    <div class="row-top"><span class="g-date">${fmtShort(g.date)}</span><span class="g-name">${name}</span></div>
+    <div class="row-bottom"><span class="g-price">${price}</span>${miniBadges(g)}</div>
+  </div>`;
+}
+
+function monthBlockHtml(ym, mode) {
+  const [y, mm] = ym.split("-");
+  const monthNum = parseInt(mm, 10);
+  const list = gamesInMonth(ym);
+  const label = LANG === "en" ? MONTH_NUM_EN(monthNum) : MONTH_NUM_ZH(monthNum);
+  const color = list.length ? colorForMonth(monthNum) : "var(--ink25)";
+  const body = list.length
+    ? (mode === "year"
+        ? list.map(yearRowHtml).join("")
+        : list.map(halfRowHtml).join(""))
+    : `<div class="mb-empty">${t("emptyMonth")}</div>`;
+
+  return `<button type="button" class="month-block" data-ym="${ym}" style="--q-color:${color};">
+    <div class="mb-head">
+      <div class="mb-head-left">
+        <span class="mb-dot"></span>
+        <span class="mb-month" data-ym-inner="${ym}">${label}</span>
+      </div>
+      <span class="mb-count">${list.length}</span>
+    </div>
+    ${body}
+  </button>`;
+}
+
+function gameCardHtml(g) {
+  const name = LANG === "en" ? g.name_en : g.name_zh;
+  const genre = LANG === "en" ? g.genre_en : g.genre_zh;
+  const price = priceMode === "USD" ? g.usd : g.ntd;
+  const rt = g.rt ? `<span class="badge" style="background:#1565C0;">R</span>` : "";
+  const dlss = g.dlss ? `<span class="badge" style="background:#1B5E20;">D</span>` : "";
+  const nv = g.nv ? `<span class="badge-wide" style="background:#76B900;">NV</span>` : "";
+  const msi = g.msi ? `<span class="badge-wide" style="background:#EB1D24;">MSI</span>` : "";
+  const rec = g.rec ? `<span class="g-rec" title="${t('legendRec')}">👍</span>` : "";
+  return `<div class="game-card">
+    <div class="g-date">${fmtShort(g.date)}</div>
+    <div class="g-name">${name}</div>
+    <div class="g-genre">${genre}</div>
+    <div class="g-price js-price" data-usd="${g.usd}" data-ntd="${g.ntd}">${price}</div>
+    <div class="g-foot">
+      <div class="g-badges">${rt}${dlss}${nv}${msi}</div>
+      ${rec}
+    </div>
+    <button type="button" class="g-detail-btn" data-detail-id="${g.id}">${t("viewFull")}</button>
+  </div>`;
+}
+
+// Detail-page layout matches the production "spot" slide 1:1 (month chip, cover +
+// meta table, 遊戲簡介 box, 市場分析/RTX 50建議 two-column) — see reference screenshot.
+// Master-detail: rendered one-at-a-time, with prev/next within the month for wayfinding.
+function detailCardHtml(g) {
+  const name = LANG === "en" ? g.name_en : g.name_zh;
+  const nameAlt = LANG === "en" ? g.name_zh : g.name_en;
+  const genre = LANG === "en" ? g.genre_en : g.genre_zh;
+  const price = priceMode === "USD" ? g.usd : g.ntd;
+  const dc = detailContent(g, LANG);
+  const monthNum = parseInt(g.date.slice(5,7), 10);
+  const chipColor = colorForMonth(monthNum);
+  const rayTracingLabel = g.rt ? "YES" : "NO";
+
+  // prev / next within the same month
+  const monthList = gamesInMonth(g.date.slice(0, 7));
+  const idx = monthList.findIndex(x => x.id === g.id);
+  const prev = idx > 0 ? monthList[idx - 1] : null;
+  const next = idx < monthList.length - 1 ? monthList[idx + 1] : null;
+  const nm = x => LANG === "en" ? x.name_en : x.name_zh;
+  const prevBtn = prev
+    ? `<button type="button" class="dc-step dc-step-prev" data-detail-id="${prev.id}">← ${nm(prev)}</button>`
+    : `<span></span>`;
+  const nextBtn = next
+    ? `<button type="button" class="dc-step dc-step-next" data-detail-id="${next.id}">${nm(next)} →</button>`
+    : `<span></span>`;
+
+  return `<div class="detail-card" id="${g.id}" data-detail-card="${g.id}" role="region" aria-label="${name}">
+    <button type="button" class="detail-back" data-back-to-month>${t("backToMonth")}</button>
+
+    <div class="dc-header">
+      <div class="dc-month-chip" style="background:${chipColor};">${MONTH_ABBR3(monthNum)}</div>
+      <div>
+        <div class="dc-eyebrow">${t("eyebrow")}</div>
+        <h3 class="dc-title">${name}<span class="dc-title-alt">(${nameAlt})</span></h3>
+      </div>
+    </div>
+    <div class="dc-redrule"></div>
+
+    <div class="dc-top">
+      <div class="dc-cover">COVER IMAGE</div>
+      <div class="dc-meta">
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("releaseDateLabel")}</span><span class="dc-meta-value">${fmtLong(g.date, LANG)}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("genreLabel")}</span><span class="dc-meta-value">${genre}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("devLabel")}</span><span class="dc-meta-value">${g.dev}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("priceLabel")}</span><span class="dc-meta-value js-price" data-usd="${g.usd}" data-ntd="${g.ntd}">${price}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("minSpecLbl")}</span><span class="dc-meta-value">${dc.minSpec}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("recSpecLbl")}</span><span class="dc-meta-value">${dc.recSpec}</span></div>
+        <div class="dc-meta-row dc-rtx50"><span class="dc-meta-label">${t("rtx50PickLabel")}</span><span class="dc-meta-value">${dc.rtx50Model}</span></div>
+        <div class="dc-meta-row dc-rt"><span class="dc-meta-label">${t("rayTracingLabel")}</span><span class="dc-meta-value">${rayTracingLabel}</span></div>
+        <div class="dc-meta-row dc-dlss"><span class="dc-meta-label">DLSS</span><span class="dc-meta-value">${dc.dlssVer}</span></div>
+      </div>
+    </div>
+
+    <div class="dc-desc-box">
+      <div class="dc-desc-head">${t("descHead")}</div>
+      <div class="dc-desc-text">${dc.desc}</div>
+    </div>
+
+    <div class="dc-two-col">
+      <div class="dc-analysis-box">
+        <div class="dc-analysis-head">${t("marketHead")}</div>
+        <div class="dc-analysis-text">${dc.market}</div>
+      </div>
+      <div class="dc-analysis-box dc-rtx50-box">
+        <div class="dc-analysis-head">${t("rtx50Head")}</div>
+        <div class="dc-analysis-text">${dc.rtx50}</div>
+      </div>
+    </div>
+
+    <div class="dc-step-row">${prevBtn}${nextBtn}</div>
+  </div>`;
+}
+
+/* =========================================================
+   Insight
+========================================================= */
+// Market-analysis narrative, written from an MSI / RTX-marketing lens.
+// Reads the current view mode so year / half / month each get a distinct read,
+// not the same templated count sentence.
+function buildInsight(list, months) {
+  const box = document.getElementById("insightBox");
+  const en = LANG === "en";
+  if (!list.length) {
+    box.innerHTML = en ? "No AAA releases scheduled in this range." : "此範圍內暫無 3A 排程，無法產生市場分析。";
+    return;
+  }
+
+  const total = list.length;
+  const rtDlss = list.filter(g => g.rt && g.dlss).length;
+  const pct = Math.round((rtDlss / total) * 100);
+  const nm = g => en ? g.name_en : g.name_zh;
+  const flagshipTitles = list.filter(g => g.rec && g.rt && g.dlss).sort((a,b) => a.date.localeCompare(b.date));
+
+  const S = v => `<span class="stat">${v}</span>`;
+  const mShort = n => en ? MONTH_NUM_EN(n) : `${n}月`;
+
+  // Densest 3-consecutive-month window within the shown range (year/half only —
+  // computed over the full month list, including zero-game months, so a real gap
+  // can't accidentally get skipped over).
+  let windowLabel = "", windowCount = 0, peakMonthLabel = "", peakMonthCount = 0;
+  if (months && months.length >= 3) {
+    const counts = months.map(ym => list.filter(g => g.date.startsWith(ym)).length);
+    let bestStart = 0, bestSum = -1;
+    for (let i = 0; i <= counts.length - 3; i++) {
+      const sum = counts[i] + counts[i+1] + counts[i+2];
+      if (sum > bestSum) { bestSum = sum; bestStart = i; }
+    }
+    const startNum = parseInt(months[bestStart].slice(5), 10);
+    const endNum = parseInt(months[bestStart + 2].slice(5), 10);
+    windowLabel = `${mShort(startNum)}–${mShort(endNum)}`;
+    windowCount = bestSum;
+    let peakIdx = bestStart, peakVal = -1;
+    for (let i = bestStart; i <= bestStart + 2; i++) { if (counts[i] > peakVal) { peakVal = counts[i]; peakIdx = i; } }
+    peakMonthLabel = mShort(parseInt(months[peakIdx].slice(5), 10));
+    peakMonthCount = peakVal;
+  }
+
+  // Shared across all three scopes: flagship = RT+DLSS AND editor-recommended, with date
+  const fmtFlag = g => `${nm(g)}（${fmtShort(g.date)}）`;
+  const flagList = flagshipTitles.map(fmtFlag).join("、");
+  const flagFrag = flagList
+    ? (en ? ` Flagship titles: ${flagList}.` : `重點主打：${flagList}。`)
+    : (en ? " No title currently marks both RT+DLSS and editor-recommended." : "無同時具備 RT+DLSS 與編輯推薦標記的作品。");
+
+  if (AAA_VIEW_MODE === "month") {
+    const monthNum = parseInt(list[0].date.slice(5, 7), 10);
+    const mLabel = en ? MONTH_NUM_EN(monthNum) : MONTH_NUM_ZH(monthNum);
+    const cmp = pct > YEAR_RTDLSS_PCT ? (en?"above":"高於") : pct < YEAR_RTDLSS_PCT ? (en?"below":"低於") : (en?"in line with":"與");
+    const parts = [];
+
+    // Opening line: volume + RT+DLSS share vs. the annual baseline
+    parts.push(en
+      ? `<b>${mLabel}</b> ${S(total)} AAA release${total>1?"s":""}, ${S(rtDlss)} (${pct}%) RT+DLSS-tagged (${cmp} the ${YEAR_RTDLSS_PCT}% annual average).`
+      : `<b>${mLabel}</b> ${S(total)} 款 3A，RT+DLSS 標記 ${S(rtDlss)} 款（${pct}%，${cmp}全年平均 ${YEAR_RTDLSS_PCT}%）。`);
+
+    // Flagship — spec-verified association (RT+DLSS + market-heat recommendation)
+    flagshipTitles.forEach(g => {
+      const ssdClause = isLongForm(g)
+        ? (en ? ` as an open-world title, it is also associated with high-capacity SSD demand.`
+              : `作為開放世界遊戲，另與大容量 SSD 需求相關聯。`)
+        : "";
+      parts.push(en
+        ? `<b>${nm(g)}</b> (${fmtShort(g.date)}) carries the RT+DLSS and market-heat recommendation, mapping to mid-to-high-end GPU demand${ssdClause ? ";" + ssdClause : "."}`
+        : `<b>${nm(g)}</b>（${fmtShort(g.date)}）具備 RT+DLSS 與市場熱度推薦，對應中高階顯卡需求${ssdClause ? "；" + ssdClause : "。"}`);
+    });
+
+    // MMO — explicitly labeled as genre-level inference, not verified data
+    list.filter(isMMO).forEach(g => {
+      parts.push(en
+        ? `<b>${nm(g)}</b> (${fmtShort(g.date)}) is an MMORPG title; by genre inference, associated with headset, microphone, and router demand (not data-verified).`
+        : `<b>${nm(g)}</b>（${fmtShort(g.date)}）為 MMO 資料片，依類型推論與耳機、麥克風、路由器需求相關（非數據佐證）。`);
+    });
+
+    box.innerHTML = parts.join(" ");
+    return;
+  }
+
+  // year / half — one-line scan: volume + densest window + flagship titles w/ dates
+  const scope = AAA_VIEW_MODE === "year"
+    ? (en ? "2026" : "2026 全年")
+    : (AAA_VIEW_MODE === "h1" ? (en ? "H1 2026" : "2026 上半年") : (en ? "H2 2026" : "2026 下半年"));
+
+  if (en) {
+    box.innerHTML =
+      `${scope}: ${S(total)} AAA releases. Densest window is <b>${windowLabel}</b> (${S(windowCount)}, ${peakMonthLabel} peaks at ${S(peakMonthCount)}). ` +
+      `RT+DLSS-tagged: ${S(rtDlss)} (${pct}%).${flagFrag}`;
+  } else {
+    box.innerHTML =
+      `${scope} ${S(total)} 款 3A，發售最密集為 <b>${windowLabel}</b>（${S(windowCount)} 款，${peakMonthLabel}單月 ${S(peakMonthCount)} 款為峰值），RT+DLSS 標記 ${S(rtDlss)} 款（${pct}%）。${flagFrag}`;
+  }
+}
+
+/* =========================================================
+   Main render
+========================================================= */
+function renderAaa() {
+  document.getElementById("insightBox").style.display = "";  // detail mode hides it; reset each render
+  document.getElementById("eyebrowText").textContent = t("eyebrow");
+  document.getElementById("navYearLabel").textContent = t("yearNav");
+  document.getElementById("navMonthLabel").textContent = t("monthNav");
+  document.getElementById("currencyLabel").textContent = t("currency");
+  document.getElementById("legendRow").innerHTML = `
+    <div class="legend-item"><span class="legend-badge" style="background:#1565C0;">R</span>${t("legendRt")}</div>
+    <div class="legend-item"><span class="legend-badge" style="background:#1B5E20;">D</span>${t("legendDlss")}</div>
+    <div class="legend-item"><span class="legend-badge" style="background:#76B900; width:auto; padding:0 5px;">NV</span>${t("legendNv")}</div>
+    <div class="legend-item"><span class="legend-badge" style="background:#EB1D24; width:auto; padding:0 5px;">MSI</span>${t("legendMsi")}</div>
+    <div class="legend-item">👍 ${t("legendRec")}</div>
+  `;
+
+  // ---- top pills: 全年 / 上半年 / 下半年 ----
+  const topPills = document.getElementById("topPills");
+  topPills.innerHTML = "";
+  [["year", t("year")], ["h1", t("h1")], ["h2", t("h2")]].forEach(([mode, label]) => {
+    const btn = document.createElement("button");
+    btn.className = "mn-btn mn-top" + (AAA_VIEW_MODE === mode ? " active" : "");
+    btn.textContent = label;
+    btn.addEventListener("click", () => setAaaView(mode));
+    topPills.appendChild(btn);
+  });
+
+  // ---- month pills 1–12 ----
+  const monthPills = document.getElementById("monthPills");
+  monthPills.innerHTML = "";
+  getAaaMonths(AAA_YEAR).forEach(ym => {
+    const monthNum = parseInt(ym.split("-")[1], 10);
+    const btn = document.createElement("button");
+    btn.className = "mn-btn" + (AAA_VIEW_MODE === "month" && AAA_MONTH === ym ? " active" : "");
+    btn.textContent = LANG === "en" ? MONTH_NUM_EN(monthNum) : MONTH_NUM_ZH(monthNum);
+    btn.addEventListener("click", () => setAaaView("month", ym));
+    monthPills.appendChild(btn);
+  });
+
+  const viewSlot = document.getElementById("viewSlot");
+  const summarySlot = document.getElementById("summaryBarSlot");
+  const detailWrap = document.getElementById("detailAreaWrap");
+  summarySlot.innerHTML = "";
+  detailWrap.innerHTML = "";
+
+  if (AAA_VIEW_MODE === "year") {
+    document.getElementById("pageTitle").textContent = t("titleYear")(AAA_YEAR);
+    const months = getAaaMonths(AAA_YEAR);
+    viewSlot.innerHTML = `<div class="overview-grid g-year">${months.map(ym => monthBlockHtml(ym, "year")).join("")}</div>`;
+    buildInsight(months.flatMap(gamesInMonth), months);
+    wireOverviewClicks(viewSlot);
+  } else if (AAA_VIEW_MODE === "h1" || AAA_VIEW_MODE === "h2") {
+    const isH1 = AAA_VIEW_MODE === "h1";
+    document.getElementById("pageTitle").textContent = isH1 ? t("titleH1")(AAA_YEAR) : t("titleH2")(AAA_YEAR);
+    const months = getAaaMonths(AAA_YEAR).slice(isH1 ? 0 : 6, isH1 ? 6 : 12);
+    viewSlot.innerHTML = `<div class="overview-grid g-half">${months.map(ym => monthBlockHtml(ym, "half")).join("")}</div>`;
+    buildInsight(months.flatMap(gamesInMonth), months);
+    wireOverviewClicks(viewSlot);
+  } else if (AAA_VIEW_MODE === "month") {
+    const ym = AAA_MONTH;
+    const monthNum = parseInt(ym.split("-")[1], 10);
+    const list = gamesInMonth(ym);
+    document.getElementById("pageTitle").textContent = t("titleMonth")(AAA_YEAR, monthNum, list.length);
+
+    if (activeDetailId && list.length) {
+      // ---- MASTER-DETAIL: single game detail (only this one card + its image in the DOM) ----
+      const g = list.find(x => x.id === activeDetailId) || list[0];
+      summarySlot.innerHTML = "";
+      document.getElementById("insightBox").style.display = "none";
+      viewSlot.innerHTML = "";
+      detailWrap.innerHTML = `<div class="detail-list">${detailCardHtml(g)}</div>`;
+      wireDetailClicks(detailWrap);
+    } else {
+      // ---- INDEX: card grid (summary stat bar removed per request) ----
+      document.getElementById("insightBox").style.display = "";
+      summarySlot.innerHTML = "";
+
+      viewSlot.innerHTML = list.length
+        ? `<div class="game-grid">${list.map(gameCardHtml).join("")}</div>`
+        : `<div class="empty-view">${t("emptyMonth")}</div>`;
+
+      buildInsight(list);
+
+      // whole card OR its button opens that one game's detail
+      viewSlot.querySelectorAll(".g-detail-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => { e.stopPropagation(); openDetail(btn.dataset.detailId); });
+      });
+      viewSlot.querySelectorAll(".game-card").forEach(card => {
+        const btn = card.querySelector(".g-detail-btn");
+        if (btn) card.addEventListener("click", () => openDetail(btn.dataset.detailId));
+      });
+    }
+  }
+
+  wirePriceButtons();
+}
+
+function wireOverviewClicks(container) {
+  container.querySelectorAll(".month-block").forEach(block => {
+    block.addEventListener("click", () => setAaaView("month", block.dataset.ym));
+  });
+}
+
+function wireDetailClicks(container) {
+  container.querySelectorAll("[data-back-to-month]").forEach(btn => {
+    btn.addEventListener("click", closeDetail);
+  });
+  // prev / next within the month — swap the single detail in place
+  container.querySelectorAll(".dc-step").forEach(btn => {
+    btn.addEventListener("click", () => openDetail(btn.dataset.detailId));
+  });
+}
+
+// Price toggle updates only the price text in place — never rebuilds the view,
+// so it can't bounce your scroll position while you're reading a detail card.
+function wirePriceButtons() {
+  document.querySelectorAll(".price-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === priceMode);
+    btn.onclick = () => {
+      priceMode = btn.dataset.mode;
+      document.querySelectorAll(".price-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === priceMode));
+      document.querySelectorAll(".js-price").forEach(el => {
+        el.textContent = priceMode === "USD" ? el.dataset.usd : el.dataset.ntd;
+      });
+    };
+  });
+}
+
+document.getElementById("langToggle").querySelectorAll("button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    LANG = btn.dataset.lang;
+    document.getElementById("langToggle").querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+    renderAaa();
+  });
+});
+
+document.getElementById("changeNote").innerHTML =
+  `<b>單月分析精簡過：</b>開頭一句（總數＋RT+DLSS占比 vs. 全年平均 ${YEAR_RTDLSS_PCT}%），旗艦作（RT+DLSS＋市場熱度推薦）一句話講完 GPU 關聯，屬開放世界/RPG/冒險類型再補一句 SSD 關聯；MMO 作品獨立一句、標「依類型推論」＋「非數據佐證」。拿掉了原本的「其餘款項」收尾句與較長的推理過程說明。用詞統一為「市場熱度推薦」。`;
+
+renderAaa();
+</script>
+</body>
+</html>
