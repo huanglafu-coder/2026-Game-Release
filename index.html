@@ -1039,6 +1039,22 @@
         margin-top: 10px;
         min-width: 0;
       }
+
+      /* .ag2's 1fr column won't shrink below its nowrap chip content's min-content
+         width otherwise, forcing the whole page wider than the phone screen. */
+      .ag2 { grid-template-columns: 50px minmax(0, 1fr); }
+      .ag2 .it { white-space: normal; }
+
+      /* Part 3's GPU filter tabs (RTX 50/40/30/20, GTX 16, AMD) don't wrap otherwise,
+         pushing the row past the phone screen edge. */
+      .gpu-filter-tabs { flex-wrap: wrap; }
+
+      /* .scrollwrap is a flex item inside .slide's column flex layout — without
+         min-width:0 its wide data table pushes the whole page wider instead of
+         scrolling horizontally within its own overflow:auto box. Same for .col,
+         a .cols2 grid item that also defaults to min-width:auto. */
+      .scrollwrap, .col { min-width: 0; }
+
     }
     .norm-controls { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; margin: 4px 0 14px; }
     .norm-controls label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
@@ -1053,6 +1069,11 @@
     /* ─── Part 5 · Weekly Top Sellers ─── */
     .ts-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
     .ts-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    /* Fixed 4-col/3-col grids don't fit a phone screen — collapse to a single
+       column below 900px. Card content/desktop layout untouched. */
+    @media (max-width: 900px) {
+      .ts-grid-4, .ts-grid-3 { grid-template-columns: 1fr; }
+    }
     .ts-card { background:#fafafa; border:1px solid #e8e8e8; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; }
     .ts-card-hdr { font-size:12px; font-weight:800; color:#fff; margin:-10px -12px 8px; padding:6px 12px; border-radius:5px 5px 0 0; }
     .ts-hdr-global { background:#17a2b8; }
