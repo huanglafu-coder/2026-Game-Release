@@ -46,6 +46,9 @@
       min-height: 100vh;
       min-width: 1520px;
     }
+    @media (max-width: 900px) {
+      body { min-width: 0; }
+    }
 
     .mono {
       font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
@@ -1121,33 +1124,13 @@
     --pill-bg: #f9f9f9; --pill-border: #ddd; --pill-ink: #888;
     --neutral: #9AA0A6;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --red: #FF4433; --black: #F2F2F0; --white: #1B1B1A; --surface: #232322; --line: #383836;
-      --ink: #F2F2F0; --ink60: rgba(242,242,240,.64); --ink40: rgba(242,242,240,.42); --ink25: rgba(242,242,240,.25);
-      --page-bg: #141413; --card-shadow: 0 1px 4px rgba(0,0,0,.35);
-      --pill-bg: #2A2A28; --pill-border: #444; --pill-ink: #999; --neutral: #7A8085;
-    }
-  }
-  :root[data-theme="dark"] {
-    --red: #FF4433; --black: #F2F2F0; --white: #1B1B1A; --surface: #232322; --line: #383836;
-    --ink: #F2F2F0; --ink60: rgba(242,242,240,.64); --ink40: rgba(242,242,240,.42); --ink25: rgba(242,242,240,.25);
-    --page-bg: #141413; --card-shadow: 0 1px 4px rgba(0,0,0,.35);
-    --pill-bg: #2A2A28; --pill-border: #444; --pill-ink: #999; --neutral: #7A8085;
-  }
-  :root[data-theme="light"] {
-    --red: #FF0000; --black: #000000; --white: #FFFFFF; --surface: #FFFFFF; --line: #E5E5E5;
-    --ink: #000000; --ink60: rgba(0,0,0,.60); --ink40: rgba(0,0,0,.40); --ink25: rgba(0,0,0,.25);
-    --page-bg: #FAFAF9; --card-shadow: 0 1px 4px rgba(0,0,0,.07);
-    --pill-bg: #f9f9f9; --pill-border: #ddd; --pill-ink: #888; --neutral: #9AA0A6;
-  }
+  /* This report has no dark-theme design anywhere else (Parts 1/2/3/5), and --red/
+     --ink/--surface/--line are shared globally by production's own .slide/.eyebrow/
+     .redrule etc. — a prefers-color-scheme override here would silently recolor the
+     whole report (not just this dashboard) whenever the viewer's OS is in dark mode.
+     Intentionally light-only. */
 
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--page-bg); color: var(--ink);
-    font-family: "Inter", "Noto Sans TC", "Helvetica Neue", Arial, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
   /* .wrap / .slide / .eyebrow / .title / .redrule / .mn-btn / .lang-toggle are
      intentionally NOT redefined here — this dashboard is embedded inside the
      full report and reuses those classes exactly as the other Parts already
