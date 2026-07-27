@@ -15771,7 +15771,7 @@ function detailCardHtml(g) {
       <div class="dc-meta">
         <div class="dc-meta-row"><span class="dc-meta-label">${t("releaseDateLabel")}</span><span class="dc-meta-value">${fmtLong(g.date, LANG)}</span></div>
         <div class="dc-meta-row"><span class="dc-meta-label">${t("genreLabel")}</span><span class="dc-meta-value">${genre}</span></div>
-        <div class="dc-meta-row"><span class="dc-meta-label">${t("devLabel")}</span><span class="dc-meta-value">${g.dev}</span></div>
+        <div class="dc-meta-row"><span class="dc-meta-label">${t("devLabel")}</span><span class="dc-meta-value">${g.dev}${(() => { const note = LANG === "en" ? (g.dev_pub_note_en || g.dev_pub_note) : g.dev_pub_note; return note ? ` <mark style="background:#fff59d;padding:1px 5px;border-radius:2px;">${esc(note)}</mark>` : ""; })()}</span></div>
         <div class="dc-meta-row"><span class="dc-meta-label">${t("priceLabel")}</span><span class="dc-meta-value js-price" data-usd="${g.usd}" data-ntd="${g.ntd}">${price}</span></div>
         <div class="dc-meta-row"><span class="dc-meta-label">${minSpecLbl}</span><span class="dc-meta-value">${minSpecVal}</span></div>
         <div class="dc-meta-row"><span class="dc-meta-label">${recSpecLbl}</span><span class="dc-meta-value">${recSpecVal}</span></div>
