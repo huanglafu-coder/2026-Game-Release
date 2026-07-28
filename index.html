@@ -15684,7 +15684,7 @@ function halfRowHtml(g) {
   return `<div class="mb-row-half">
     <span class="row-date">${fmtShort(g.date)}</span>
     <div class="row-name"><span class="g-name">${name}</span><span class="mini-badges">${miniBadges(g)}</span></div>
-    <div class="row-meta"><span class="g-genre">${genre}</span><span class="g-price">${price}</span></div>
+    <div class="row-meta"><span class="g-genre">${genre}</span><span class="g-price js-price" data-usd="${g.usd}" data-ntd="${g.ntd}">${price}</span></div>
   </div>`;
 }
 
