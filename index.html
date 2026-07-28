@@ -15985,23 +15985,40 @@ function buildInsight(list, months) {
   if (AAA_VIEW_MODE === "month") {
     const monthNum = parseInt(list[0].date.slice(5, 7), 10);
     const mLabel = en ? MONTH_NUM_EN(monthNum) : MONTH_NUM_ZH(monthNum);
-    const cmp = pct > YEAR_RTDLSS_PCT ? (en?"above":"高於") : pct < YEAR_RTDLSS_PCT ? (en?"below":"低於") : (en?"in line with":"與");
     const parts = [];
 
-    // Opening line: volume + RT+DLSS share vs. the annual baseline. The GPU-tier
-    // conclusion is stated ONCE here (when there are RT+DLSS titles) instead of
-    // being repeated on every flagship sentence below.
-    const gpuTierEn = rtDlss > 0 ? ", mapping to mid-to-high-end GPU demand" : "";
-    const gpuTierZh = rtDlss > 0 ? "，對應中高階顯卡需求" : "";
-    // A single AA-tier release skews the RT+DLSS share in a way that isn't
-    // representative of that month's AAA tech adoption — call it out rather than
-    // let a bare "0%" read as a trend among true AAA titles.
-    const soloAA = total === 1 && list[0].isAA;
-    const aaCaveatEn = soloAA ? ` Note: this month's sole release is an AA-tier title, not a flagship AAA production, so the figure above isn't representative of AAA tech adoption.` : "";
-    const aaCaveatZh = soloAA ? `（註：本月唯一一款為 AA 級製作，非旗艦 3A 規格，此數據不代表 3A 陣容的技術採用趨勢）` : "";
-    parts.push(en
-      ? `<b>${mLabel}</b> ${S(total)} AAA release${total>1?"s":""}, ${S(rtDlss)} (${pct}%) RT+DLSS-tagged (${cmp} the ${YEAR_RTDLSS_PCT}% annual average)${gpuTierEn}.${aaCaveatEn}`
-      : `<b>${mLabel}</b> ${S(total)} 款 3A，RT+DLSS 標記 ${S(rtDlss)} 款（${pct}%，${cmp}全年平均 ${YEAR_RTDLSS_PCT}%）${gpuTierZh}${aaCaveatZh}。`);
+    // AA-tagged titles aren't 3A releases, so they're excluded from the "N 款
+    // 3A" count and from the RT+DLSS share denominator entirely — counting an
+    // AA game as "3A" and then footnoting "this isn't really 3A" was a direct
+    // self-contradiction. AA titles that exist that month are mentioned
+    // separately, never folded into the AAA stat.
+    const aaaList = list.filter(g => !g.isAA);
+    const aaList = list.filter(g => g.isAA);
+    const aaaTotal = aaaList.length;
+    const aaaRtDlss = aaaList.filter(g => g.rt && g.dlss).length;
+    const aaaPct = aaaTotal > 0 ? Math.round((aaaRtDlss / aaaTotal) * 100) : 0;
+    const aaNamesEn = aaList.map(g => g.name_en).join("、");
+    const aaNamesZh = aaList.map(g => g.name_zh).join("、");
+
+    if (aaaTotal === 0) {
+      // No 3A releases this month at all — the RT+DLSS-vs-annual-average stat
+      // isn't meaningful with a zero denominator, so it's simply not stated.
+      parts.push(en
+        ? `<b>${mLabel}</b> has no AAA releases this month (only ${S(aaList.length)} AA-tier title${aaList.length>1?"s":""}: ${aaNamesEn}).`
+        : `<b>${mLabel}</b>無 3A 級作品上市（僅 ${S(aaList.length)} 款 AA 級：${aaNamesZh}）。`);
+    } else {
+      const cmp = aaaPct > YEAR_RTDLSS_PCT ? (en?"above":"高於") : aaaPct < YEAR_RTDLSS_PCT ? (en?"below":"低於") : (en?"in line with":"與");
+      // Opening line: volume + RT+DLSS share vs. the annual baseline. The GPU-tier
+      // conclusion is stated ONCE here (when there are RT+DLSS titles) instead of
+      // being repeated on every flagship sentence below.
+      const gpuTierEn = aaaRtDlss > 0 ? ", mapping to mid-to-high-end GPU demand" : "";
+      const gpuTierZh = aaaRtDlss > 0 ? "，對應中高階顯卡需求" : "";
+      const aaAsideEn = aaList.length ? ` (${S(aaList.length)} AA-tier title${aaList.length>1?"s":""} also releasing this month, excluded from this count: ${aaNamesEn})` : "";
+      const aaAsideZh = aaList.length ? `（另有 ${S(aaList.length)} 款 AA 級同月上市，未計入此統計：${aaNamesZh}）` : "";
+      parts.push(en
+        ? `<b>${mLabel}</b> ${S(aaaTotal)} AAA release${aaaTotal>1?"s":""}, ${S(aaaRtDlss)} (${aaaPct}%) RT+DLSS-tagged (${cmp} the ${YEAR_RTDLSS_PCT}% annual average)${gpuTierEn}.${aaAsideEn}`
+        : `<b>${mLabel}</b> ${S(aaaTotal)} 款 3A，RT+DLSS 標記 ${S(aaaRtDlss)} 款（${aaaPct}%，${cmp}全年平均 ${YEAR_RTDLSS_PCT}%）${gpuTierZh}${aaAsideZh}。`);
+    }
 
     // Flagships — grouped by status instead of one templated sentence per game,
     // so "具備 RT+DLSS，為已上市強作" doesn't repeat N times. Tech is only called
