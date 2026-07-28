@@ -15993,9 +15993,15 @@ function buildInsight(list, months) {
     // being repeated on every flagship sentence below.
     const gpuTierEn = rtDlss > 0 ? ", mapping to mid-to-high-end GPU demand" : "";
     const gpuTierZh = rtDlss > 0 ? "，對應中高階顯卡需求" : "";
+    // A single AA-tier release skews the RT+DLSS share in a way that isn't
+    // representative of that month's AAA tech adoption — call it out rather than
+    // let a bare "0%" read as a trend among true AAA titles.
+    const soloAA = total === 1 && list[0].isAA;
+    const aaCaveatEn = soloAA ? ` Note: this month's sole release is an AA-tier title, not a flagship AAA production, so the figure above isn't representative of AAA tech adoption.` : "";
+    const aaCaveatZh = soloAA ? `（註：本月唯一一款為 AA 級製作，非旗艦 3A 規格，此數據不代表 3A 陣容的技術採用趨勢）` : "";
     parts.push(en
-      ? `<b>${mLabel}</b> ${S(total)} AAA release${total>1?"s":""}, ${S(rtDlss)} (${pct}%) RT+DLSS-tagged (${cmp} the ${YEAR_RTDLSS_PCT}% annual average)${gpuTierEn}.`
-      : `<b>${mLabel}</b> ${S(total)} 款 3A，RT+DLSS 標記 ${S(rtDlss)} 款（${pct}%，${cmp}全年平均 ${YEAR_RTDLSS_PCT}%）${gpuTierZh}。`);
+      ? `<b>${mLabel}</b> ${S(total)} AAA release${total>1?"s":""}, ${S(rtDlss)} (${pct}%) RT+DLSS-tagged (${cmp} the ${YEAR_RTDLSS_PCT}% annual average)${gpuTierEn}.${aaCaveatEn}`
+      : `<b>${mLabel}</b> ${S(total)} 款 3A，RT+DLSS 標記 ${S(rtDlss)} 款（${pct}%，${cmp}全年平均 ${YEAR_RTDLSS_PCT}%）${gpuTierZh}${aaCaveatZh}。`);
 
     // Flagships — grouped by status instead of one templated sentence per game,
     // so "具備 RT+DLSS，為已上市強作" doesn't repeat N times. Tech is only called
