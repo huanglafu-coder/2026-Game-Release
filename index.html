@@ -15632,8 +15632,9 @@ function miniBadges(g) {
   const dlss = g.dlss ? `<span class="mini-badge" style="background:#1B5E20;">D</span>` : "";
   const nv = g.isNVBundle ? `<span class="mini-badge-wide" style="background:#76B900;">NV</span>` : "";
   const msi = g.isMSICollaboration ? `<span class="mini-badge-wide" style="background:#EB1D24;">MSI</span>` : "";
+  const aa = g.isAA ? `<span class="mini-badge-wide" style="background:#757575;" title="${LANG === 'en' ? 'AA-tier title, included for reference' : '定位為 AA 級製作，供參考收錄'}">AA</span>` : "";
   const rec = g.rec ? `<span class="mini-rec">👍</span>` : "";
-  return `${rt}${dlss}${nv}${msi}${rec}`;
+  return `${rt}${dlss}${nv}${msi}${aa}${rec}`;
 }
 
 function yearRowHtml(g) {
@@ -15692,6 +15693,7 @@ function gameCardHtml(g) {
   const dlss = g.dlss ? `<span class="badge" style="background:#1B5E20;">D</span>` : "";
   const nv = g.isNVBundle ? `<span class="badge-wide" style="background:#76B900;">NV</span>` : "";
   const msi = g.isMSICollaboration ? `<span class="badge-wide" style="background:#EB1D24;">MSI</span>` : "";
+  const aa = g.isAA ? `<span class="badge-wide" style="background:#757575;" title="${LANG === 'en' ? 'AA-tier title, included for reference' : '定位為 AA 級製作，供參考收錄'}">AA</span>` : "";
   const rec = g.rec ? `<span class="g-rec" title="${t('legendRec')}">👍</span>` : "";
   const monthNum = parseInt(g.date.slice(5, 7), 10);
   // Real cover image where the production dataset has one; gradient placeholder otherwise.
@@ -15705,7 +15707,7 @@ function gameCardHtml(g) {
     <div class="g-genre">${genre}</div>
     <div class="g-price js-price" data-usd="${g.usd}" data-ntd="${g.ntd}">${price}</div>
     <div class="g-foot">
-      <div class="g-badges">${rt}${dlss}${nv}${msi}</div>
+      <div class="g-badges">${rt}${dlss}${nv}${msi}${aa}</div>
       ${rec}
     </div>
     <button type="button" class="g-detail-btn" data-detail-id="${g.id}">${t("viewFull")}</button>
