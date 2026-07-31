@@ -8579,18 +8579,18 @@
     "usd": "$49.99",
     "ntd": "NT$1,499",
     "rt": false,
-    "dlss": false,
+    "dlss": true,
     "rec": true,
     "hasRealContent": true,
     "desc": "《星際大戰》首款回合制戰術 RPG！指揮前帝國軍官 Hawks 與包含曼達洛人、絕地學徒的特種小隊，在克隆人戰爭幕後執行秘密任務。隊員羈絆、戰術定位與大地圖資源調度，打造深度策略體驗。",
     "desc_en": "Star Wars' first turn-based tactical RPG! Command ex-Imperial officer Hawks and an elite squad — Mandalorian, Jedi Padawan and more — on covert missions behind the Clone Wars front lines. Unit bonds, tactical positioning, and strategic resource management deliver deep, rewarding gameplay.",
     "market_analysis": "Star Wars IP 加上回合制戰術玩法，目標受眾橫跨星戰粉絲與策略遊戲愛好者。建議規格 RTX 3080 顯示對畫質有一定追求，有效觸及尋求升級的玩家；EA 發行保障曝光，市場潛力不容小覷。",
     "market_analysis_en": "Star Wars IP meets turn-based tactics, reaching both franchise fans and strategy enthusiasts. RTX 3080 recommended spec targets quality-driven players seeking an upgrade. EA publishing ensures broad visibility — market potential is not to be overlooked.",
-    "rtx50_analysis": "高解析度下的戰場光影細節需求顯著，MSI RTX 5070 在高解析度模式下提供流暢的戰略地圖視覺效果，確保大規模戰鬥場面的渲染品質；若遊戲日後加入 DLSS/RT 支援，RTX 50 系列可無縫受益。",
-    "rtx50_analysis_en": "High-resolution battlefield lighting demands are significant. MSI RTX 5070 delivers fluid strategic map visuals at high resolutions, maintaining render quality across large-scale engagements — and is perfectly positioned to benefit from future DLSS/RT support.",
+    "rtx50_analysis": "高解析度下的戰場光影細節需求顯著，MSI RTX 5070 在高解析度模式下提供流暢的戰略地圖視覺效果，確保大規模戰鬥場面的渲染品質；EA 官方已確認支援 DLSS，RTX 50 系列可透過 DLSS 進一步拉高高解析度幀率。",
+    "rtx50_analysis_en": "High-resolution battlefield lighting demands are significant. MSI RTX 5070 delivers fluid strategic map visuals at high resolutions, maintaining render quality across large-scale engagements — with DLSS officially confirmed by EA, RTX 50 cards can leverage it to push high-resolution framerates even higher.",
     "rtx50_rec": "RTX 5070（對應官方推薦規格 RTX 3080 效能級距）",
     "rtx50_rec_en": "RTX 5070 (mapped from official recommended spec RTX 3080)",
-    "dlss_text": "未公布",
+    "dlss_text": "DLSS（版本未公布）",
     "spec_min": "GTX 1080 / RX 5600 XT",
     "spec_rec": "RTX 3080 / RX 7800 XT",
     "req_img": null,
@@ -8842,13 +8842,13 @@
     "desc_en": "The first next-gen Ace Combat set in the new fictional world of Theve. Ray tracing is mandatory. Simultaneous PS5, Xbox Series X|S, and PC (Steam) launch with 4-player co-op mission mode.",
     "market_analysis": "皇牌空戰系列首部次世代新作，RT 強制需求拉高入門門檻至 RTX 2060。飛行模擬受眾明確，系列粉絲黏著度高；MSI RTX 50 系列可完整展現 RT 飛行場景的光影效果。",
     "market_analysis_en": "First next-gen Ace Combat, RT mandatory sets RTX 2060 as floor. Niche but loyal fanbase; MSI RTX 50 showcases full RT in aerial combat.",
-    "rtx50_analysis": "RT 為強制需求，RTX 5060 Ti 可在 1440p 下流暢運行並完整體驗光線追蹤。RTX 5070 以上可挑戰 4K 全特效。入門 RTX 5060 達最低規格但建議升至 Ti 版以確保穩定幀率。",
-    "rtx50_analysis_en": "RT mandatory — RTX 5060 Ti handles 1440p RT smoothly. RTX 5070+ targets 4K ultra. Entry RTX 5060 meets minimum but Ti recommended for stable framerates.",
-    "rtx50_rec": "RTX 5060 Ti（對應官方推薦規格 RTX 3060 Ti 效能級距）",
-    "rtx50_rec_en": "RTX 5060 Ti (mapped from official recommended spec RTX 3060 Ti)",
+    "rtx50_analysis": "RT 為強制需求，官方建議規格對應 RTX 5070，可在 1440p 下流暢運行並完整體驗光線追蹤。RTX 5070 Ti 以上可挑戰 4K 全特效。入門 RTX 5060 達最低規格但建議升至 RTX 5070 以確保穩定幀率。",
+    "rtx50_analysis_en": "RT mandatory — the official recommended tier maps to RTX 5070 for smooth 1440p RT. RTX 5070 Ti+ targets 4K ultra. Entry RTX 5060 meets minimum but RTX 5070 recommended for stable framerates.",
+    "rtx50_rec": "RTX 5070（對應官方推薦規格 RTX 3070 效能級距）",
+    "rtx50_rec_en": "RTX 5070 (mapped from official recommended spec RTX 3070)",
     "dlss_text": "DLSS（版本未公布）",
     "spec_min": "RTX 2060 / RX 5600 XT",
-    "spec_rec": "RTX 3060 Ti / RX 6700 XT",
+    "spec_rec": "RTX 3070 / RX 6800",
     "req_img": null,
     "isNVBundle": false,
     "isMSICollaboration": false,
@@ -14910,6 +14910,15 @@ const isMMO = g => g.genre_zh === "MMORPG" || /MMORPG/i.test(g.genre_en || "");
 // Only curated for spotlight (rec:true) titles; maintaining this for all 37 games
 // isn't worth the upkeep cost.
 const GAME_NEWS = {
+  "Rayman Legends Retold": [
+    {
+      "date": "2026-07-27",
+      "title_zh": "《雷射超人：傳奇重生》確認於 Gamescom 2026（8/26–30）開放試玩，含首關、飛龍騎乘與音樂關卡",
+      "title_en": "Rayman Legends Retold confirmed playable at Gamescom 2026 (Aug 26–30), featuring the opening level, a dragon ride, and a musical level",
+      "source": "Final Weapon",
+      "url": "https://finalweapon.net/2026/07/27/rayman-legends-retold-gamescom-2026/"
+    }
+  ],
   "MARVEL Tōkon: Fighting Souls": [
     {
       "date": "2026-07-24",
@@ -15064,6 +15073,13 @@ const GAME_NEWS = {
     }
   ],
   "inZOI": [
+    {
+      "date": "2026-07-24",
+      "title_zh": "KRAFTON 釋出《inZOI》開發者日誌「Fundamentals First」，宣布從底層重構角色自主行為（autonomy）模擬系統",
+      "title_en": "KRAFTON's inZOI developer diary 'Fundamentals First' announces a ground-up rebuild of the character autonomy simulation system",
+      "source": "Sims Community",
+      "url": "https://simscommunity.info/2026/07/24/next-inzoi-update-simulation-july/"
+    },
     {
       "date": "2025-04-04",
       "title_zh": "KRAFTON 官方公告：《inZOI》搶先體驗一週內銷量突破 100 萬套，創公司最快銷售紀錄",
@@ -15238,6 +15254,13 @@ const GAME_NEWS = {
   ],
   "PRAGMATA": [
     {
+      "date": "2026-07-30",
+      "title_zh": "《PRAGMATA》全球銷量突破 250 萬套、超出 Capcom 預期，高層表示續作機率「相當高」",
+      "title_en": "Pragmata surpasses 2.5 million copies sold, exceeding Capcom's expectations — executive says a sequel is 'very likely'",
+      "source": "GamesRadar+",
+      "url": "https://www.gamesradar.com/games/action/pragmatas-chances-of-getting-a-sequel-are-high-capcom-exec-says-as-the-new-action-hit-exceeds-expectations-with-2-5-million-copies-sold-and-counting/"
+    },
+    {
       "date": "2026-04-20",
       "title_zh": "《PRAGMATA》上市評價亮眼、銷售衝上圖表榜首，但同時在線人數表現平淡",
       "title_en": "Pragmata launch: glowing reviews and chart-topping sales but mediocre player counts",
@@ -15327,6 +15350,13 @@ const GAME_NEWS = {
     }
   ],
   "LEGO® Batman™: Legacy of the Dark Knight": [
+    {
+      "date": "2026-07-21",
+      "title_zh": "《樂高蝙蝠俠：黑暗騎士傳承》推出 1.008 更新（約 13GB），著重穩定性、效能與體驗優化",
+      "title_en": "LEGO Batman: Legacy of the Dark Knight Update 1.008 (~13GB) rolls out, focused on stability, performance, and quality-of-life fixes",
+      "source": "MP1st",
+      "url": "https://mp1st.com/news/lego-batman-legacy-of-the-dark-knight-update-1-008-released-july-21"
+    },
     {
       "date": "2026-05-27",
       "title_zh": "分析機構：《樂高蝙蝠俠：黑暗騎士傳承》上市一週全平台賣出 120 萬套、營收 8300 萬美元",
@@ -15445,6 +15475,13 @@ const GAME_NEWS = {
   ],
   "ACE COMBAT 8: WINGS OF THEVE": [
     {
+      "date": "2026-07-28",
+      "title_zh": "《皇牌空戰8：希孚之翼》公布完整官方 PC 系統需求：建議顯卡 RTX 3070／RX 6800，強制 SSD 與硬體光追，並確認採用 Denuvo",
+      "title_en": "Ace Combat 8: Wings of Theve reveals full official PC system requirements — recommended RTX 3070 / RX 6800, mandatory SSD and hardware ray tracing, with Denuvo confirmed",
+      "source": "DSOGaming",
+      "url": "https://www.dsogaming.com/news/ace-combat-8-wings-of-theve-gets-official-pc-requirements-will-have-denuvo/"
+    },
+    {
       "date": "2026-06-04",
       "title_zh": "《皇牌空戰8：希孚之翼》最低配置強制要求「硬體光線追蹤顯卡」，Low畫質1080p/30fps仍須開啟升頻技術",
       "title_en": "Ace Combat 8: Wings of Theve mandates a ray-tracing-capable GPU — even 1080p/30fps on Low requires an upscaler",
@@ -15508,6 +15545,13 @@ const GAME_NEWS = {
     }
   ],
   "Paralives": [
+    {
+      "date": "2026-07-16",
+      "title_zh": "《Paralives》7 月 16 日更新：新增長椅坐姿動畫、重製渡假日系統並修正多項錯誤",
+      "title_en": "Paralives July 16 update adds long-chair sitting animations, revamps vacation days, and fixes numerous bugs",
+      "source": "Sims Community",
+      "url": "https://simscommunity.info/2026/07/16/paralives-update-july-16th-patch-notes/"
+    },
     {
       "date": "2026-06-25",
       "title_zh": "《Paralives》搶先體驗上線一個月銷量突破 100 萬套",
