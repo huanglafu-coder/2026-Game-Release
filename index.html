@@ -14815,6 +14815,24 @@ const CAPSULE_B64 = {
           "Palworld": 1623730,
           "Stellar Blade™": 3489700,
           "EA SPORTS™ College Football 27": 4032350,
+          // 2026-08 週榜新進榜遊戲（appid 取自榜單頁的 /app/ 連結）
+          "Mistfall Hunter": 3282300,
+          "Halo: Campaign Evolved": 2806050,
+          "Marvel's Spider-Man 2": 2651280,
+          "Zenless Zone Zero": 4162040,
+          "Beast of Reincarnation": 2001760,
+          "hololive Dreams": 4282500,
+          "SpiritVale": 3767850,
+          "Shift At Midnight": 3722330,
+          "Village in the Shade": 3934250,
+          "Street Fighter™ 6 - Year 4 Ultimate Pass": 4412690,
+          "Street Fighter™ 6 - Year 4 Character Pass": 4412680,
+          "DragonSword : Awakening": 4570720,
+          "Sephiria": 2436940,
+          "Corsair Cove": 1368140,
+          "Le Mans Ultimate": 2399420,
+          "DRAGON BALL: Sparking! ZERO": 1790600,
+          "DRAGON BALL: Sparking! ZERO - Super Limit-Breaking NEO": 4433900,
         };
 
         // Some newer app IDs only have assets on the hashed store_item_assets CDN path
@@ -14950,6 +14968,22 @@ const CAPSULE_B64 = {
           "The Seven Deadly Sins: Origin":            { usd: "Free",     ntd: "Free"      },
           "TBH: Task Bar Hero":                       { usd: "Free",     ntd: "Free"      },
           "Tom Clancy\'s Rainbow Six Siege":         { usd: "Free",     ntd: "Free"      },
+          // 2026-08 只在日/韓/歐或中國榜出現、Global/US/Taiwan 取不到價的遊戲
+          // 售價來自 Steam appdetails API（cc=us / cc=tw）
+          "SpiritVale":                                              { usd: "$14.99"  , ntd: "NT$299"          },
+          "Shift At Midnight":                                       { usd: "$9.99"   , ntd: "NT$216"     },
+          "Village in the Shade":                                    { usd: "$49.99"  , ntd: "NT$1,650"   },
+          "Street Fighter™ 6 - Year 4 Character Pass":               { usd: "$29.99"  , ntd: "NT$860"     },
+          "DragonSword : Awakening":                                 { usd: "$29.99"  , ntd: "NT$560"     },
+          "Sephiria":                                                { usd: "$8.99"   , ntd: "NT$160"     },
+          "Corsair Cove":                                            { usd: "$29.99"  , ntd: "NT$599"     },
+          "MECCHA CHAMELEON":                                        { usd: "$5.99"   , ntd: "NT$136"     },
+          "Le Mans Ultimate":                                        { usd: "$39.99"  , ntd: "NT$1,185"   },
+          "DRAGON BALL: Sparking! ZERO":                             { usd: "$49.99"  , ntd: "NT$1,390"   },
+          "DRAGON BALL: Sparking! ZERO - Super Limit-Breaking NEO":  { usd: "$34.99"  , ntd: "NT$1,050"   },
+          "Cyberpunk 2077":                                          { usd: "$17.99"       , ntd: "NT$479"     },
+          "Marvel's Spider-Man 2":                                   { usd: "$40.19"       , ntd: "NT$998"     },
+          "Street Fighter™ 6 - Year 4 Ultimate Pass":                { usd: "$45.99"  , ntd: "NT$1,320"   },
         };
         Object.entries(_PRICE_SUPPLEMENT).forEach(([name, p]) => {
           if (!_gamePriceMap[name]) _gamePriceMap[name] = {};
