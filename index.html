@@ -16300,6 +16300,11 @@ function openDetail(id) {
   lastTriggerId = id;
   activeDetailId = id;
   detailPage = 1;
+  // Keep the month context on the game actually being shown. prev/next can now
+  // cross months, and "← back to this month" renders from AAA_MONTH — without this
+  // it would drop you back into whichever month you first opened.
+  const target = GAMES.find(x => x.id === id);
+  if (target) AAA_MONTH = target.date.slice(0, 7);
   renderAaa();
   const card = document.querySelector("[data-detail-card]");
   scrollToTop(document.querySelector(".slide[data-key=\"aaa-dashboard\"]"));
@@ -16458,17 +16463,27 @@ function detailCardHtml(g) {
     : null;
   const newsItems = GAME_NEWS[g.name_en];
 
-  // prev / next within the same month
-  const monthList = gamesInMonth(g.date.slice(0, 7));
-  const idx = monthList.findIndex(x => x.id === g.id);
-  const prev = idx > 0 ? monthList[idx - 1] : null;
-  const next = idx < monthList.length - 1 ? monthList[idx + 1] : null;
+  // prev / next across the whole release timeline rather than just this month —
+  // this section is a chronological schedule, so a month boundary is a calendar
+  // artifact, not a meaningful stop. Only the very first and very last game are
+  // dead ends now (previously every month had one at each end).
+  const chain = GAMES.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const idx = chain.findIndex(x => x.id === g.id);
+  const prev = idx > 0 ? chain[idx - 1] : null;
+  const next = idx >= 0 && idx < chain.length - 1 ? chain[idx + 1] : null;
   const nm = x => LANG === "en" ? x.name_en : x.name_zh;
+  // A step that crosses into another month says so, since the month chip alone is
+  // too subtle a cue that you have left the month you were browsing.
+  const stepLabel = x => {
+    if (x.date.slice(0, 7) === g.date.slice(0, 7)) return nm(x);
+    const mn = parseInt(x.date.slice(5, 7), 10);
+    return LANG === "en" ? `${MONTH_ABBR3(mn)} · ${nm(x)}` : `${mn}月｜${nm(x)}`;
+  };
   const prevBtn = prev
-    ? `<button type="button" class="dc-step dc-step-prev" data-detail-id="${prev.id}">← ${nm(prev)}</button>`
+    ? `<button type="button" class="dc-step dc-step-prev" data-detail-id="${prev.id}">← ${stepLabel(prev)}</button>`
     : `<span></span>`;
   const nextBtn = next
-    ? `<button type="button" class="dc-step dc-step-next" data-detail-id="${next.id}">${nm(next)} →</button>`
+    ? `<button type="button" class="dc-step dc-step-next" data-detail-id="${next.id}">${stepLabel(next)} →</button>`
     : `<span></span>`;
 
   const hasSpecImg = officialSpec && officialSpec.img;
