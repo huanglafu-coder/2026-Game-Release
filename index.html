@@ -8671,12 +8671,12 @@
     "desc_en": "A rare non-Pokemon action RPG from GAME FREAK centered on reincarnation mechanics, where players transform between creature forms. GAME FREAKs first major direct PC release draws significant attention beyond the Pokemon fanbase.",
     "market_analysis": "GAME FREAK 品牌效應跨越口袋妖怪粉絲圈，新 IP 話題性高。夏季發行視窗競爭激烈，獨特的轉生機制差異化明顯，PC 直接發行是關鍵市場實驗。",
     "market_analysis_en": "GAME FREAKs brand resonates beyond the Pokemon fanbase; new IP generates high buzz. Competitive summer window, but unique reincarnation mechanics offer clear differentiation. Direct PC release is a key market experiment.",
-    "rtx50_analysis": "官方系統需求已確認支援 Ray Tracing（Unreal Engine 5 Lumen）與 DLSS，對應官方推薦規格 RTX 3060，MSI RTX 5060 搭配 DLSS 即可在硬體光追下提供流暢的 1080p/60 體驗。8/9 的 1.0.7 更新僅修正升頻設定在重啟後被重置的問題，官方在該次更新說明中把「DLSS 4/4.5（L／M）與 FSR4 的實作」列為後續版本計畫；8/15 推出的 1.0.8 更新已依官方公告正式實作 DLSS 4/4.5（L／M）與 FSR 4，但 Frame Generation 仍在規劃中、尚未上線，Intel XeSS 也未支援。因此 RTX 50 世代主打的 DLSS 4 Multi Frame Generation 目前在本作仍無法使用，選卡時應以原生效能級距與新版 Super Resolution 畫質為準，而非倍幀加成。",
-    "rtx50_analysis_en": "Official system requirements confirm Ray Tracing (Unreal Engine 5 Lumen) and DLSS support; mapped from the recommended RTX 3060 tier, the MSI RTX 5060 with DLSS delivers smooth 1080p/60 gameplay with hardware ray tracing enabled. The Aug 9 Update 1.0.7 only fixed a bug that reset upscaling settings on restart — the developer's own patch notes listed “Implementation of DLSS 4/4.5 (L/M) and FSR4” as planned for a subsequent patch. The Aug 15 Update 1.0.8 has now officially shipped DLSS 4/4.5 (L/M) and FSR 4 support per the developer's own announcement, though Frame Generation remains planned and not yet live, and Intel XeSS is still unsupported. The RTX 50 generation's headline DLSS 4 Multi Frame Generation therefore still cannot be used here, so GPU choice should be based on native performance tier and the new Super Resolution quality rather than any frame-multiplication uplift.",
+    "rtx50_analysis": "官方系統需求已確認支援 Ray Tracing（Unreal Engine 5 Lumen）與 DLSS，對應官方推薦規格 RTX 3060，MSI RTX 5060 搭配 DLSS 即可在硬體光追下提供流暢的 1080p/60 體驗。8/9 的 1.0.7 更新僅修正升頻設定在重啟後被重置的問題，官方在該次更新說明中把「DLSS 4/4.5（L／M）與 FSR4 的實作」列為後續版本計畫；8/15 推出的 1.0.8 更新已依官方公告正式實作 DLSS 4/4.5（L／M）與 FSR 4；緊接著 8/24 的 1.0.9 更新再正式加入 DLSS／FSR Frame Generation（官方 patch notes 明列「Implemented frame generation options (DLSS/FSR)」，可於設定選單開啟），Intel XeSS 則仍未支援。至此 RTX 40／50 世代玩家已能開啟 Frame Generation 換取更高幀率，選卡時可將原生效能級距、新版 Super Resolution 畫質與倍幀加成一併納入考量。",
+    "rtx50_analysis_en": "Official system requirements confirm Ray Tracing (Unreal Engine 5 Lumen) and DLSS support; mapped from the recommended RTX 3060 tier, the MSI RTX 5060 with DLSS delivers smooth 1080p/60 gameplay with hardware ray tracing enabled. The Aug 9 Update 1.0.7 only fixed a bug that reset upscaling settings on restart — the developer's own patch notes listed “Implementation of DLSS 4/4.5 (L/M) and FSR4” as planned for a subsequent patch. The Aug 15 Update 1.0.8 officially shipped DLSS 4/4.5 (L/M) and FSR 4 support, and the Aug 24 Update 1.0.9 has now added DLSS/FSR Frame Generation as well — the developer's own patch notes list “Implemented frame generation options (DLSS/FSR),” enabled from the settings menu — while Intel XeSS remains unsupported. Frame Generation is therefore now available to RTX 40/50 owners for higher frame rates, so GPU choice can weigh native performance tier, the new Super Resolution quality, and the frame-multiplication uplift together.",
     "rtx50_rec": "RTX 5060（對應官方推薦規格 RTX 3060 效能級距）",
     "rtx50_rec_en": "RTX 5060 (mapped from recommended RTX 3060 tier)",
-    "dlss_text": "DLSS 4/4.5（L／M）／FSR 4，無 FG／XeSS",
-    "dlss_text_en": "DLSS 4/4.5 (L/M) / FSR 4, no FG or XeSS",
+    "dlss_text": "DLSS 4/4.5（L／M）／FSR 4＋FG，無 XeSS",
+    "dlss_text_en": "DLSS 4/4.5 (L/M) / FSR 4 + FG, no XeSS",
     "spec_min": "GTX 1070 (8GB) / RX 580 (8GB)",
     "spec_rec": "RTX 3060 (12GB) / RX 6700 XT (12GB)",
     "req_img": null,
@@ -15481,6 +15481,13 @@ const GAME_NEWS = {
   ],
   "Control Resonant": [
     {
+      "date": "2026-08-25",
+      "title_zh": "NVIDIA 宣布《控制：共振》納入 GeForce RTX 50 系列同捆方案，並確認數位版 9/24 準時上市，本作首發即支援 Path Tracing 與 DLSS 4.5（含 Ray Reconstruction）",
+      "title_en": "NVIDIA announces Control Resonant as a GeForce RTX 50-series bundle title and confirms the Sept 24 digital launch, with day-one Path Tracing and DLSS 4.5 (Ray Reconstruction)",
+      "source": "NVIDIA (official) / VideoCardz",
+      "url": "https://www.nvidia.com/en-us/geforce/news/control-resonant-geforce-rtx-50-series-bundle/"
+    },
+    {
       "date": "2026-08-18",
       "title_zh": "《控制：共振》宣布開發完成（Gold），數位版維持 9/24 上市，實體版延至 10/15",
       "title_en": "Control Resonant goes gold — digital launch holds on September 24 while physical editions slip to October 15",
@@ -15539,6 +15546,13 @@ const GAME_NEWS = {
       "title_en": "007 First Light tops 4 million copies in three months; IO Interactive reveals Year One content roadmap",
       "source": "IO Interactive (official) / The FPS Review",
       "url": "https://ioi.dk/007firstlightgame/news/2026/007-first-light-reaches-4-million-copies-sold"
+    },
+    {
+      "date": "2026-08-19",
+      "title_zh": "NVIDIA 於 Gamescom 2026 確認《007：初現曙光》路徑追蹤更新將於 9/15 上線，同步導入 DLSS 4.5 Ray Reconstruction；IO Interactive 官方亦公布更新頁面",
+      "title_en": "At Gamescom 2026 NVIDIA confirms 007 First Light's Path Tracing update arrives Sept 15 with DLSS 4.5 Ray Reconstruction; IO Interactive publishes an official update page",
+      "source": "NVIDIA (official) / IO Interactive",
+      "url": "https://www.nvidia.com/en-us/geforce/news/gamescom-2026-nvidia-geforce-rtx-dlss-4-5-announcements/"
     },
     {
       "date": "2026-08-05",
@@ -16209,6 +16223,13 @@ const GAME_NEWS = {
   ],
   "Beast of Reincarnation": [
     {
+      "date": "2026-08-24",
+      "title_zh": "《轉世之獸》1.0.9 更新正式上線：官方 patch notes 確認正式加入 DLSS／FSR Frame Generation（可於設定選單開啟），並新增超寬螢幕支援與過場略過；Intel XeSS 仍未支援",
+      "title_en": "Beast of Reincarnation Update 1.0.9 ships DLSS/FSR Frame Generation (togglable in settings), plus ultrawide support and skippable cutscenes; Intel XeSS still unsupported",
+      "source": "Steam News (official announcement) / Noisy Pixel / MP1st",
+      "url": "https://store.steampowered.com/news/app/2001760"
+    },
+    {
       "date": "2026-08-15",
       "title_zh": "《轉世之獸》1.0.8 更新正式上線：官方公告確認實作 DLSS 4/4.5（L／M）與 FSR 4，Frame Generation 仍在規劃中",
       "title_en": "Beast of Reincarnation's 1.0.8 update ships: official patch notes confirm DLSS 4/4.5 (L/M) and FSR 4 are now implemented, with Frame Generation still planned",
@@ -16724,6 +16745,13 @@ const GAME_NEWS = {
     }
   ],
   "Silent Hill: Townfall": [
+    {
+      "date": "2026-08-24",
+      "title_zh": "《沉默之丘：隕落小鎮》確認為 PS5 主機平台限時獨占至少 6 個月，但 PC（Steam／Epic）維持 9/24 同步首發",
+      "title_en": "Silent Hill: Townfall confirmed as a PS5 console timed exclusive for at least 6 months, while PC (Steam/Epic) still launches day one on Sept 24",
+      "source": "Pure Xbox / PlayStation Universe",
+      "url": "https://www.psu.com/news/silent-hill-townfall-is-a-ps5-console-exclusive-for-at-least-6-months-after-launch/"
+    },
     {
       "date": "2026-08-20",
       "title_zh": "《沉默之丘：隕落小鎮》釋出約 18 分鐘實機遊玩影片公開遊戲開場，並重申 9/24 於 PS5、Steam、Epic 發售",
