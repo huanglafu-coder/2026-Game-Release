@@ -14037,6 +14037,18 @@
     // desktop-only and carries no VRAM field), so they are pinned rather than
     // generated. A month with no entry falls through to the generated text in
     // autoInsight(). Figures come from that month's scrape of Steam's videocard page.
+    // Steam reports storage tiers in English only; the Chinese copy must not echo
+    // them raw. Keys are the exact category strings used by D.totalHdTrend /
+    // D.freeHdTrend — an unmapped tier falls back to the original label.
+    const STORAGE_LABEL_ZH = {
+      "Unspecified": "未指定", "Less than 10 GB": "不足 10 GB", "10 GB to 99 GB": "10–99 GB",
+      "100 GB to 249 GB": "100–249 GB", "250 GB to 499 GB": "250–499 GB",
+      "500 GB to 749 GB": "500–749 GB", "750 GB to 999 GB": "750–999 GB",
+      "Above 1 TB": "1 TB 以上", "1 TB to 2 TB": "1–2 TB", "2 TB to 3 TB": "2–3 TB",
+      "3 TB to 4 TB": "3–4 TB", "Above 4 TB": "4 TB 以上",
+    };
+    const stLabel = (cat, lang) => (lang === "zh-tw" && STORAGE_LABEL_ZH[cat]) || cat;
+
     const P4_INSIGHT = {
       "2026-08": {
         zh: "顯存主流門檻已完成換代：16 GB 自 7 月超車後續居第一，本月 <b>26.92%</b>（MoM ▲1.02%），對 8 GB <b>25.74%</b>（▲0.42%）的領先由 0.58pp 擴大至 1.18pp，16 GB 以上級距合計 <b>36.16%</b>（▲0.89%）。就機種結構而言，16 GB 對應 RTX 5070 Ti（1.82%）、RTX 5080（1.71%）、RX 9070 XT（1.46%）等中高階卡，以及 RTX 5060 Ti（2.55%）、RX 9060 XT（0.80%）的 16 GB 版本；8 GB 則對應 RTX 4060 Laptop（3.84%）、RTX 4060（3.60%）、RTX 5060（3.16%）這批入門主力——市場已形成「<b>入門 8 GB／主流 16 GB</b>」的雙峰結構。<br><br>8 GB 本月結束連續 11 個月下滑、首度回升，直接對應筆電端的擴張：<b>RTX 5060 Laptop（2.66%，▲0.47%）與 RTX 4060 Laptop（3.84%，▲0.20%）是全清單漲幅最大的兩張卡，且皆為 8 GB</b>。本月變動幾乎全由筆電貢獻——筆電 GPU 合計 15.11%（▲0.98pp），桌機獨顯合計 66.76%（▼0.17pp）。12 GB 停在 <b>12.99%</b>（▲0.11%）近乎不動，RTX 5070（3.77%，▲0.15%）的新增被 RTX 4070 家族（4.19%，▲0.01%）的停滯稀釋。退場的是 6 GB 以下：6 GB ▼0.35%、4 GB ▼0.25%、2 GB ▼0.41%，對應 GTX 1650（2.49%，▼0.12%，全清單最大跌幅）與 GTX 1660 系列的下線。<br><span style=\"font-size:13px;color:var(--ink60)\">註：顯存統計母體含內顯回報的共享記憶體與未進榜機種，且 RTX 5060 Ti、RX 9060 XT 等雙版本卡無法拆分，級距的月變化不宜逐卡歸因——16 GB 本月 ▲1.02pp 中，可明確歸屬的獨顯僅 ▲0.15pp。</span>",
@@ -14161,23 +14173,84 @@
         const thd = sliceTrend(D.totalHdTrend, ACTIVE_MONTH);
         const fhd = sliceTrend(D.freeHdTrend, ACTIVE_MONTH);
         if (thd.length && fhd.length) {
-          // Find 1TB+ total share
-          const above1TB = thd.filter(r => /above\s*1|1\s*tb\s*to|2\s*tb|3\s*tb|4\s*tb/i.test(r.cat))
-            .reduce((sum, r) => sum + r.m5, 0);
-          const smallFree = fhd.filter(r => /less\s*than\s*10|10\s*gb\s*to\s*99|< ?10/i.test(r.cat))
-            .reduce((sum, r) => sum + r.m5, 0);
+          const L = c => stLabel(c, LANG);
+          const tRow = n => thd.find(r => r.cat === n) || { cat: n, m5: 0, mom: 0 };
+          const fRow = n => fhd.find(r => r.cat === n) || { cat: n, m5: 0, mom: 0 };
+          // Value of a series n months before ACTIVE_MONTH, or null if out of range.
+          const back = (trend, name, n) => {
+            const i = trend.dates.indexOf(ACTIVE_MONTH) - n;
+            const s = trend.series.find(x => x.name === name);
+            return (i >= 0 && s && s.vals[i] != null) ? s.vals[i] : null;
+          };
+          // Year-over-year, suppressed when the swing is implausible — a few months
+          // in this dataset are known-contaminated (2025-12 and 2026-02 read ~65-70%
+          // on "Above 1 TB"), and a bad endpoint makes the comparison meaningless.
+          const yoy = (trend, name, cur) => {
+            const p = back(trend, name, 12);
+            if (p == null) return null;
+            const d = round2(cur - p);
+            return Math.abs(d) > 10 ? null : d;
+          };
+          const pt = v => "<b>" + Math.abs(v).toFixed(2) + "pt</b>";
+          const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+
+          const t1 = tRow("Above 1 TB");
+          const t1yoy = yoy(D.totalHdTrend, "Above 1 TB", t1.m5);
+          const _tv = D.totalHdTrend.series.find(x => x.name === "Above 1 TB");
+          const _ti = D.totalHdTrend.dates.indexOf(ACTIVE_MONTH);
+          let subFifty = 0;
+          if (_tv && _ti >= 0) for (let i = _ti; i >= 0 && _tv.vals[i] < 50; i--) subFifty++;
+          // Which total-capacity tier absorbed the shift. Only meaningful when the
+          // 1 TB+ tier actually gave ground and the gain is of comparable size.
+          const gainer = thd.filter(r => r.cat !== "Above 1 TB" && r.cat !== "Unspecified")
+            .map(r => ({ r, y: yoy(D.totalHdTrend, r.cat, r.m5) }))
+            .filter(x => x.y != null && x.y > 0)
+            .sort((a, b) => b.y - a.y)[0];
+          const absorbed = t1yoy != null && t1yoy < -0.5 && gainer && gainer.y >= Math.abs(t1yoy) * 0.4;
+
+          const lowCats = ["Less than 10 GB", "10 GB to 99 GB"];
+          const low = round2(lowCats.reduce((s, c) => s + fRow(c).m5, 0));
+          const lowMom = round2(lowCats.reduce((s, c) => s + fRow(c).mom, 0));
+          const lowPrev = lowCats.map(c => back(D.freeHdTrend, c, 12));
+          const lowYoy = lowPrev.every(v => v != null) ? round2(low - lowPrev.reduce((a, b) => a + b, 0)) : null;
+          const under250 = round2(low + fRow("100 GB to 249 GB").m5);
           const topFree = [...fhd].sort((a, b) => b.m5 - a.m5)[0];
+          // Use a contrastive connector only when the two horizons disagree.
+          const oppose = lowYoy != null && lowMom !== 0 && (lowYoy > 0) !== (lowMom > 0);
+
           if (zh) {
-            let txt = `玩家的儲存容量極度緊繃。雖然有過半（<b>${above1TB > 0 ? above1TB.toFixed(2) + "%" : "50%+"}</b>）的玩家擁有 <b>1TB 以上</b> 的硬碟總容量，`;
-            txt += `但在其剩餘可用容量中，有高達 <b>${smallFree > 0 ? smallFree.toFixed(2) + "%" : "-"}</b> 的玩家剩餘可用空間<b>低於 99GB</b>，`;
-            if (topFree) txt += `且 <b>${topFree.cat}</b> 剩餘容量佔比最高 (${fmtP(topFree.m5)})。`;
-            txt += `在現代遊戲動輒 100-150GB 之下，剩餘可用空間不足已成為玩家的普遍痛點。`;
+            let txt = t1yoy == null ? "本月儲存容量分布："
+              : t1yoy <= -1 ? "儲存結構正在下移而非擴張："
+              : t1yoy >= 1 ? "大容量儲存持續普及："
+              : "儲存容量分布大致持平：";
+            txt += "總容量 <b>" + L("Above 1 TB") + "</b> 佔 <b>" + fmtP(t1.m5) + "</b>（MoM " + fmtChg(t1.mom) + "）";
+            if (subFifty >= 2) txt += "，已連續 " + subFifty + " 個月低於五成";
+            if (t1yoy != null) txt += "，一年間" + (t1yoy < 0 ? "減少 " : "增加 ") + pt(t1yoy);
+            txt += "；";
+            txt += absorbed
+              ? "接手的是 <b>" + L(gainer.r.cat) + "</b>（" + fmtP(gainer.r.m5) + "，YoY ▲" + gainer.y.toFixed(2) + "pt），整體容量級距同步下移。"
+              : "次高級距為 <b>" + L(thd.filter(r => r.cat !== "Above 1 TB").sort((a, b) => b.m5 - a.m5)[0].cat) + "</b>（" + fmtP(thd.filter(r => r.cat !== "Above 1 TB").sort((a, b) => b.m5 - a.m5)[0].m5) + "）。";
+            txt += "剩餘可用空間是另一組獨立分布，分母同為全體玩家、並非上述族群的子集：可用空間<b>不足 100 GB</b> 者合計 <b>" + fmtP(low) + "</b>，本月 " + fmtChg(lowMom);
+            if (lowYoy != null) txt += "，" + (oppose ? "但" : "") + "一年來" + (lowYoy > 0 ? "增加 " + pt(lowYoy) + "，壓力持續累積" : "減少 " + pt(lowYoy) + "，已見緩解");
+            txt += "；佔比最高的級距為 <b>" + L(topFree.cat) + "</b>（" + fmtP(topFree.m5) + "）。";
+            txt += "可用空間不足 250 GB 者合計 <b>" + fmtP(under250) + "</b>——以現代 3A 單作 100–150 GB 計，這批玩家最多再容納一至兩款大作。";
             return txt;
           } else {
-            let txt = `Players' storage is extremely tight. Although over half (<b>${above1TB > 0 ? above1TB.toFixed(2) + "%" : "50%+"}</b>) own <b>1TB+</b> total drive capacity, `;
-            txt += `<b>${smallFree > 0 ? smallFree.toFixed(2) + "%" : "-"}</b> of players have <b>less than 99GB</b> free space remaining, `;
-            if (topFree) txt += `and the <b>${topFree.cat}</b> free range is the largest share (${fmtP(topFree.m5)}). `;
-            txt += `With modern games often 100-150GB each, insufficient free space has become a common pain point.`;
+            let txt = t1yoy == null ? "This month's storage mix: "
+              : t1yoy <= -1 ? "Storage is shifting downward rather than expanding: "
+              : t1yoy >= 1 ? "High-capacity storage keeps spreading: "
+              : "The storage mix is broadly flat: ";
+            txt += "<b>" + L("Above 1 TB") + "</b> total capacity accounts for <b>" + fmtP(t1.m5) + "</b> (" + fmtChgEn(t1.mom) + " MoM)";
+            if (subFifty >= 2) txt += ", its " + ord(subFifty) + " consecutive month below 50%";
+            if (t1yoy != null) txt += ", " + (t1yoy < 0 ? "down " : "up ") + pt(t1yoy) + " year over year";
+            txt += ". ";
+            txt += absorbed
+              ? "That share has moved to <b>" + L(gainer.r.cat) + "</b> (" + fmtP(gainer.r.m5) + ", ▲" + gainer.y.toFixed(2) + "pt YoY), stepping the whole capacity ladder down. "
+              : "The next largest tier is <b>" + L(thd.filter(r => r.cat !== "Above 1 TB").sort((a, b) => b.m5 - a.m5)[0].cat) + "</b> (" + fmtP(thd.filter(r => r.cat !== "Above 1 TB").sort((a, b) => b.m5 - a.m5)[0].m5) + "). ";
+            txt += "Free space is a separate distribution — also measured across all players, not a subset of the group above: <b>" + fmtP(low) + "</b> have <b>under 100 GB</b> free, " + fmtChgEn(lowMom) + " MoM";
+            if (lowYoy != null) txt += ", " + (oppose ? "but " : "and ") + (lowYoy > 0 ? "up " + pt(lowYoy) + " year over year, so the squeeze keeps building" : "down " + pt(lowYoy) + " year over year, so it is easing");
+            txt += "; the largest single band is <b>" + L(topFree.cat) + "</b> (" + fmtP(topFree.m5) + "). ";
+            txt += "In total <b>" + fmtP(under250) + "</b> have under 250 GB free — at 100–150 GB per modern AAA title, room for one or two more installs at most.";
             return txt;
           }
         }
