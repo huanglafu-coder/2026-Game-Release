@@ -14040,6 +14040,86 @@
     // Steam reports storage tiers in English only; the Chinese copy must not echo
     // them raw. Keys are the exact category strings used by D.totalHdTrend /
     // D.freeHdTrend — an unmapped tier falls back to the original label.
+    // Memory fitted to each card in D.gpus, keyed by the exact name D.gpus uses
+    // (AMD rows drop the "AMD Radeon " prefix). D.gpus has no VRAM field, so this
+    // is what lets the VRAM analysis name the cards behind a tier. A string value
+    // means the card ships in two memory configurations and Steam merges both SKUs
+    // into one row — such a card cannot be assigned to a single tier.
+    const GPU_VRAM = {
+      "NVIDIA GeForce RTX 5090": 32,
+      "NVIDIA GeForce RTX 5080": 16,
+      "NVIDIA GeForce RTX 5070 Ti": 16,
+      "NVIDIA GeForce RTX 5070": 12,
+      "NVIDIA GeForce RTX 5060": 8,
+      "NVIDIA GeForce RTX 5050": 8,
+      "NVIDIA GeForce RTX 4090": 24,
+      "NVIDIA GeForce RTX 4080 SUPER": 16,
+      "NVIDIA GeForce RTX 4080": 16,
+      "NVIDIA GeForce RTX 4070 Ti SUPER": 16,
+      "NVIDIA GeForce RTX 4070 Ti": 12,
+      "NVIDIA GeForce RTX 4070 SUPER": 12,
+      "NVIDIA GeForce RTX 4070": 12,
+      "NVIDIA GeForce RTX 4060": 8,
+      "NVIDIA GeForce RTX 3090": 24,
+      "NVIDIA GeForce RTX 3080 Ti": 12,
+      "NVIDIA GeForce RTX 3070 Ti": 8,
+      "NVIDIA GeForce RTX 3070": 8,
+      "NVIDIA GeForce RTX 3060 Ti": 8,
+      "NVIDIA GeForce RTX 2080 Ti": 11,
+      "NVIDIA GeForce RTX 2080 SUPER": 8,
+      "NVIDIA GeForce RTX 2080": 8,
+      "NVIDIA GeForce RTX 2070 SUPER": 8,
+      "NVIDIA GeForce RTX 2070": 8,
+      "NVIDIA GeForce RTX 2060 SUPER": 8,
+      "NVIDIA GeForce GTX 1660 SUPER": 6,
+      "NVIDIA GeForce GTX 1660 Ti": 6,
+      "NVIDIA GeForce GTX 1660": 6,
+      "NVIDIA GeForce GTX 1650 SUPER": 4,
+      "NVIDIA GeForce GTX 1650 Ti": 4,
+      "NVIDIA GeForce GTX 1650": 4,
+      "NVIDIA GeForce RTX 5060 Ti": "8/16",
+      "NVIDIA GeForce RTX 4060 Ti": "8/16",
+      "NVIDIA GeForce RTX 3060": "8/12",
+      "NVIDIA GeForce RTX 3050": "6/8",
+      "NVIDIA GeForce RTX 3080": "10/12",
+      "NVIDIA GeForce RTX 2060": "6/12",
+      "RX 9070 XT": 16,
+      "RX 9070": 16,
+      "RX 7900 XTX": 24,
+      "RX 7900 XT": 20,
+      "RX 7800 XT": 16,
+      "RX 7700 XT": 12,
+      "RX 7600": 8,
+      "RX 6900 XT": 16,
+      "RX 6800 XT": 16,
+      "RX 6800": 16,
+      "RX 6750 XT": 12,
+      "RX 6700 XT": 12,
+      "RX 6650 XT": 8,
+      "RX 6600 XT": 8,
+      "RX 6600": 8,
+      "RX 5700 XT": 8,
+      "RX 9060 XT": "8/16",
+      "RX 580": "4/8",
+      "RX 580 2048SP": "4/8",
+      "RX 570": "4/8",
+      "RX 550": "2/4",
+      "RX 6500 XT": "4/8",
+    };
+    // Cards sitting in a given tier, biggest share first. `rows` must be the card
+    // list for the month being viewed — never D.gpus directly, whose m5 is always
+    // the newest month regardless of which month the reader has selected.
+    const cardsAtVram = (gb, rows) => (rows || [])
+      .filter(g => GPU_VRAM[g.name] === gb && g.m5 > 0)
+      .sort((a, b) => b.m5 - a.m5);
+    // Cards offering that tier as one of two configurations; Steam merges both SKUs
+    // into one row, so the share cannot be split between the two capacities.
+    const cardsOfferingVram = (gb, rows) => (rows || [])
+      .filter(g => typeof GPU_VRAM[g.name] === "string"
+        && GPU_VRAM[g.name].split("/").includes(String(gb)) && g.m5 > 0)
+      .sort((a, b) => b.m5 - a.m5);
+    const shortGpu = n => n.replace("NVIDIA GeForce ", "");
+
     const STORAGE_LABEL_ZH = {
       "Unspecified": "未指定", "Less than 10 GB": "不足 10 GB", "10 GB to 99 GB": "10–99 GB",
       "100 GB to 249 GB": "100–249 GB", "250 GB to 499 GB": "250–499 GB",
@@ -14416,10 +14496,40 @@
               : "<b>" + lead.name + "</b> 持續居首，本月 <b>" + fmtP(lead.v) + "</b>（MoM " + fmtChg(leadMom) + "）";
             if (second) txt += "，領先次位的 <b>" + second.name + "</b>（" + fmtP(second.v) + "，MoM " + fmtChg(secondMom) + "） <b>" + (lead.v - second.v).toFixed(2) + "pt</b>";
             txt += "。";
+            // Tie each tier back to the cards that carry it — a product fact, so it
+            // holds regardless of the month, unlike attributing the tier's monthly
+            // change to specific models.
+            // The linkage is only stated for months gpuDataForMonth can resolve;
+            // outside that range the per-month share is unavailable and naming cards
+            // would put models on screen that had not launched yet.
+            const _mIdx = (D.dates2026 || []).indexOf(ACTIVE_MONTH);
+            const _rows = _mIdx >= 2 ? gpuDataForMonth(ACTIVE_MONTH) : null;
+            const nameCards = (tier, n) => {
+              const gb = parseInt(tier, 10);
+              if (!_rows || !gb || /MB/.test(tier)) return "";
+              return cardsAtVram(gb, _rows).slice(0, n)
+                .map(g => shortGpu(g.name) + "（" + fmtP(g.m5) + "）").join("、");
+            };
+            const alsoOffer = (tier, n) => {
+              const gb = parseInt(tier, 10);
+              if (!_rows || !gb) return "";
+              return cardsOfferingVram(gb, _rows).slice(0, n)
+                .map(g => shortGpu(g.name) + "（" + fmtP(g.m5) + "，" + GPU_VRAM[g.name].split("/").join(" GB／") + " GB 雙版本）").join("、");
+            };
+            const leadCards = nameCards(lead.name, 3);
+            const secondCards = second ? nameCards(second.name, 3) : "";
+            const leadDual = alsoOffer(lead.name, 2);
+            if (leadCards) {
+              txt += "對應到顯卡，<b>" + lead.name + "</b> 級距的代表機種為 <b>" + leadCards + "</b>";
+              if (leadDual) txt += "，另有 <b>" + leadDual + "</b> 等機種同時提供該容量";
+              txt += secondCards ? "；<b>" + second.name + "</b> 則以 <b>" + secondCards + "</b> 為主。" : "。";
+            }
             if (leadArc) txt += "序列起點至今，" + leadArc.name + " 自 " + fmtP(leadArc.from) + " 變為 " + fmtP(leadArc.to) + "（" + pt(leadArc.d) + "）";
             if (secondArc) txt += "，" + secondArc.name + " 自 " + fmtP(secondArc.from) + " 變為 " + fmtP(secondArc.to) + "（" + pt(secondArc.d) + "）";
             if (faller && faller.name !== lead.name && faller.name !== (second && second.name)) {
               txt += "，跌幅最大的是 <b>" + faller.name + "</b>（" + fmtP(faller.from) + " → " + fmtP(faller.to) + "，" + pt(faller.d) + "）";
+              const fCards = nameCards(faller.name, 2);
+              if (fCards) txt += "，對應 " + fCards + " 等機種退場";
             }
             txt += "。";
             const up = bigNow > bigThen;
@@ -14432,10 +14542,34 @@
               : "<b>" + lead.name + "</b> has held first place throughout and now stands at <b>" + fmtP(lead.v) + "</b> (" + fmtChgEn(leadMom) + " MoM)";
             if (second) txt += ", <b>" + (lead.v - second.v).toFixed(2) + "pt</b> ahead of <b>" + second.name + "</b> (" + fmtP(second.v) + ", " + fmtChgEn(secondMom) + " MoM)";
             txt += ". ";
+            const _mIdxEn = (D.dates2026 || []).indexOf(ACTIVE_MONTH);
+            const _rowsEn = _mIdxEn >= 2 ? gpuDataForMonth(ACTIVE_MONTH) : null;
+            const nameCardsEn = (tier, n) => {
+              const gb = parseInt(tier, 10);
+              if (!_rowsEn || !gb || /MB/.test(tier)) return "";
+              return cardsAtVram(gb, _rowsEn).slice(0, n)
+                .map(g => shortGpu(g.name) + " (" + fmtP(g.m5) + ")").join(", ");
+            };
+            const alsoOfferEn = (tier, n) => {
+              const gb = parseInt(tier, 10);
+              if (!_rowsEn || !gb) return "";
+              return cardsOfferingVram(gb, _rowsEn).slice(0, n)
+                .map(g => shortGpu(g.name) + " (" + fmtP(g.m5) + ", sold in " + GPU_VRAM[g.name].split("/").join(" GB and ") + " GB)").join(", ");
+            };
+            const leadCardsEn = nameCardsEn(lead.name, 3);
+            const secondCardsEn = second ? nameCardsEn(second.name, 3) : "";
+            const leadDualEn = alsoOfferEn(lead.name, 2);
+            if (leadCardsEn) {
+              txt += "In card terms, the <b>" + lead.name + "</b> tier is defined by <b>" + leadCardsEn + "</b>";
+              if (leadDualEn) txt += ", with <b>" + leadDualEn + "</b> also offering that capacity";
+              txt += secondCardsEn ? "; <b>" + second.name + "</b> is mostly <b>" + secondCardsEn + "</b>. " : ". ";
+            }
             if (leadArc) txt += "Since the series began, " + leadArc.name + " has gone from " + fmtP(leadArc.from) + " to " + fmtP(leadArc.to) + " (" + pt(leadArc.d) + ")";
             if (secondArc) txt += " and " + secondArc.name + " from " + fmtP(secondArc.from) + " to " + fmtP(secondArc.to) + " (" + pt(secondArc.d) + ")";
             if (faller && faller.name !== lead.name && faller.name !== (second && second.name)) {
               txt += "; the steepest fall is <b>" + faller.name + "</b> (" + fmtP(faller.from) + " to " + fmtP(faller.to) + ", " + pt(faller.d) + ")";
+              const fCardsEn = nameCardsEn(faller.name, 2);
+              if (fCardsEn) txt += ", as " + fCardsEn + " age out";
             }
             txt += ". ";
             const up = bigNow > bigThen;
