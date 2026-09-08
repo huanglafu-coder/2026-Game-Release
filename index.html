@@ -14372,86 +14372,74 @@
         const vramData = trimToMonth(D.vramTrend, ACTIVE_MONTH);
         const idx = vramData.dates.length - 1;
         if (idx >= 1) {
-          const get8GB = vramData.series.find(s => s.name === "8 GB");
-          const get12GB = vramData.series.find(s => s.name === "12 GB");
-          const get16GB = vramData.series.find(s => s.name === "16 GB");
-
-          const v8_cur = get8GB ? round2(get8GB.vals[idx]) : 0;
-          const v8_prev = get8GB ? round2(get8GB.vals[idx-1]) : 0;
-          const v12_cur = get12GB ? round2(get12GB.vals[idx]) : 0;
-          const v12_prev = get12GB ? round2(get12GB.vals[idx-1]) : 0;
-          const v16_cur = get16GB ? round2(get16GB.vals[idx]) : 0;
-          const v16_prev = get16GB ? round2(get16GB.vals[idx-1]) : 0;
-
-          const trend8 = round2(v8_cur - v8_prev);
-          const trend12 = round2(v12_cur - v12_prev);
-          const trend16 = round2(v16_cur - v16_prev);
-
-          // 格式化 MoM 顯示
-          const fmtMom = (val) => val > 0 ? `▲<b>${val}%</b>` : (val < 0 ? `▼<b>${Math.abs(val)}%</b>` : "持平");
-          const fmtMomEn = (val) => val > 0 ? `▲<b>${val}%</b>` : (val < 0 ? `▼<b>${Math.abs(val)}%</b>` : "flat");
-
-          // 分析市場特徵，生成針對該月份的完全獨特文案
-          const dataStr = `${vramData.dates[idx]}`; // 當月日期
-          const highCap = v12_cur + v16_cur;
-          const v12_rank = v12_cur > v8_cur ? 1 : (v12_cur > v16_cur ? 2 : 3);
-          const allUp = trend8 > 0 && trend12 > 0 && trend16 > 0;
-          const allDown = trend8 < 0 && trend12 < 0 && trend16 < 0;
-          const highCapUp = trend12 + trend16 > 0;
-
-          const momStr8 = fmtMom(trend8);
-          const momStr12 = fmtMom(trend12);
-          const momStr16 = fmtMom(trend16);
+          const val = (s, i) => (s && s.vals[i] != null) ? round2(s.vals[i]) : 0;
+          const rankAt = i => vramData.series
+            .map(s => ({ name: s.name, v: val(s, i), s }))
+            .sort((a, b) => b.v - a.v);
+          const now = rankAt(idx);
+          const lead = now[0], second = now[1];
+          const leadMom = round2(lead.v - val(lead.s, idx - 1));
+          const secondMom = second ? round2(second.v - val(second.s, idx - 1)) : null;
+          // The month the current leader took the top spot, if that happened
+          // inside this window. Walk back while it is still the leader.
+          let since = null;
+          for (let i = idx; i >= 1; i--) {
+            if (rankAt(i)[0].name !== lead.name) break;
+            if (rankAt(i - 1)[0].name !== lead.name) { since = vramData.dates[i]; break; }
+          }
+          const prevLeader = since ? rankAt(vramData.dates.indexOf(since) - 1)[0].name : null;
+          const firstMonth = vramData.dates[0];
+          const arc = name => {
+            const s = vramData.series.find(x => x.name === name);
+            if (!s) return null;
+            const from = val(s, 0), to = val(s, idx);
+            return { name, from, to, d: round2(to - from) };
+          };
+          // Biggest faller since the series began — the tier actually being retired.
+          const faller = vramData.series.map(s => arc(s.name)).filter(Boolean)
+            .sort((a, b) => a.d - b.d)[0];
+          const BIG = ["16 GB", "20 GB", "22 GB", "24 GB", "32 GB"];
+          const SMALL = ["512 MB", "1 GB", "2 GB", "3 GB", "4 GB", "6 GB"];
+          const agg = (list, i) => round2(list.reduce((a, n) => {
+            const s = vramData.series.find(x => x.name === n);
+            return a + (s ? val(s, i) : 0);
+          }, 0));
+          const bigNow = agg(BIG, idx), bigThen = agg(BIG, 0);
+          const smallNow = agg(SMALL, idx), smallThen = agg(SMALL, 0);
+          const pt = v => "<b>" + (v > 0 ? "+" : "−") + Math.abs(v).toFixed(2) + "pt</b>";
+          const leadArc = arc(lead.name), secondArc = second ? arc(second.name) : null;
 
           if (zh) {
-            const monthStr = fmtMonth(ACTIVE_MONTH, "zh-tw");
-            let txt = "";
-
-            // 根據完全不同的月份特徵生成獨特文案
-            if (v12_cur > v8_cur && v16_cur > v12_cur) {
-              // 16GB 超越 12GB 超越 8GB 的罕見場景
-              txt = `${monthStr}調查數據呈現市場結構的重大轉變：<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16}) 已超越 <b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})，而 <b>12 GB</b> 亦超越 <b>8 GB</b> 佔比 <b>${v8_cur}%</b> (${momStr8})。高容量顯存已成市場主導，合計佔比 <b>${highCap}%</b>，AI 運算、虛擬化、內容創作等專業應用正推動需求升級。`;
-            } else if (v12_cur > v8_cur && trend12 > 0 && trend16 > 0 && trend8 < 0) {
-              // 12GB 超越 8GB，且高容量齊漲 8GB 下滑
-              txt = `${monthStr}調查顯示，<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12}) 已取代 <b>8 GB</b> 佔比 <b>${v8_cur}%</b> (${momStr8}) 成為新基準。<b>8 GB</b> 的下滑 (${momStr8}) 與高容量的雙雙上升 (<b>12 GB</b> ${momStr12}、<b>16 GB</b> ${momStr16}) 形成鮮明對比，標誌著顯存升級周期的完整轉型。`;
-            } else if (highCapUp && trend8 < 0 && highCap > 35) {
-              // 高容量齊增，8GB 下滑，高容量占比超 35%
-              txt = `${monthStr}調查呈現高容量全面增長的格局：<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})、<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16}) 的合計 <b>${highCap}%</b> 已接近主流。<b>8 GB</b> 雖居 <b>${v8_cur}%</b> (${momStr8})，但正逐步退出新機主流配置。大型遊戲對顯存的貪婪需求加上 4K 高幀率遊玩的普及，正加速這波升級浪潮。`;
-            } else if (allDown) {
-              // 三個容量全部下滑 - 可能是特殊月份
-              txt = `${monthStr}調查數據顯示各容量均呈現調整：<b>8 GB</b> 佔比 <b>${v8_cur}%</b> (${momStr8})、<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})、<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16})。整體市場容量分布趨於穩定，新一代 GPU 推出與遊戲發售週期的交織，使得硬體替換需求呈現週期性特徵。`;
-            } else if (allUp && highCapUp) {
-              // 全部上升且高容量增長
-              txt = `${monthStr}調查呈現全面增長態勢：<b>8 GB</b> 佔比 <b>${v8_cur}%</b> (${momStr8})、<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})、<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16})，高容量合計 <b>${highCap}%</b>。這表明新硬體採購與舊設備退出的平衡已向新世代傾斜，主流玩家裝機配置正加速升級。`;
-            } else if (trend8 < -0.3) {
-              // 8GB 大幅下滑
-              txt = `${monthStr}調查凸顯 <b>8 GB</b> 的快速衰落：佔比 <b>${v8_cur}%</b> (${momStr8})，跌幅顯著。<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})、<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16}) 則維持增長態勢。基礎容量的縮水反映出，即使入門級遊戲玩家亦傾向選擇更高規格顯卡以應對未來遊戲需求。`;
-            } else {
-              // 預設均衡敘述
-              txt = `${monthStr}調查數據顯示，<b>8 GB</b> 佔比 <b>${v8_cur}%</b> (${momStr8}) 仍為主流但${trend8 < 0 ? "持續下滑" : (trend8 > 0 ? "止跌回升" : "保持穩定")}。<b>12 GB</b> 佔比 <b>${v12_cur}%</b> (${momStr12})、<b>16 GB</b> 佔比 <b>${v16_cur}%</b> (${momStr16}) 的高容量合計 <b>${highCap}%</b>，${highCapUp ? "展現穩健增長，" : ""}反映玩家應對大型遊戲與 4K 遊玩需求的硬體升級持續進行中。`;
+            let txt = "自 " + firstMonth + " 起算的長期走勢中，";
+            txt += since && prevLeader
+              ? "<b>" + lead.name + "</b> 已於 <b>" + since + "</b> 取代 <b>" + prevLeader + "</b> 登上第一，本月 <b>" + fmtP(lead.v) + "</b>（MoM " + fmtChg(leadMom) + "）"
+              : "<b>" + lead.name + "</b> 持續居首，本月 <b>" + fmtP(lead.v) + "</b>（MoM " + fmtChg(leadMom) + "）";
+            if (second) txt += "，領先次位的 <b>" + second.name + "</b>（" + fmtP(second.v) + "，MoM " + fmtChg(secondMom) + "） <b>" + (lead.v - second.v).toFixed(2) + "pt</b>";
+            txt += "。";
+            if (leadArc) txt += "序列起點至今，" + leadArc.name + " 自 " + fmtP(leadArc.from) + " 變為 " + fmtP(leadArc.to) + "（" + pt(leadArc.d) + "）";
+            if (secondArc) txt += "，" + secondArc.name + " 自 " + fmtP(secondArc.from) + " 變為 " + fmtP(secondArc.to) + "（" + pt(secondArc.d) + "）";
+            if (faller && faller.name !== lead.name && faller.name !== (second && second.name)) {
+              txt += "，跌幅最大的是 <b>" + faller.name + "</b>（" + fmtP(faller.from) + " → " + fmtP(faller.to) + "，" + pt(faller.d) + "）";
             }
-
+            txt += "。";
+            const up = bigNow > bigThen;
+            txt += "級距結構整體" + (up ? "上移" : "下移") + "：<b>16 GB 以上</b>合計自 " + fmtP(bigThen) + " 變為 <b>" + fmtP(bigNow) + "</b>，<b>6 GB 以下</b>合計自 " + fmtP(smallThen) + " 變為 <b>" + fmtP(smallNow) + "</b>。";
             return txt;
           } else {
-            const monthStr = fmtMonth(ACTIVE_MONTH, "en");
-            let txt = "";
-
-            if (v12_cur > v8_cur && v16_cur > v12_cur) {
-              txt = `${monthStr} survey reveals a pivotal shift in VRAM hierarchy: <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}) has surpassed <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}), which has itself overtaken <b>8 GB</b> at <b>${v8_cur}%</b> (${fmtMomEn(trend8)}). High-capacity memory now dominates at <b>${highCap}%</b>, driven by AI compute, virtualization, and professional content creation workloads.`;
-            } else if (v12_cur > v8_cur && trend12 > 0 && trend16 > 0 && trend8 < 0) {
-              txt = `${monthStr} data marks a decisive inflection: <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}) has displaced <b>8 GB</b> at <b>${v8_cur}%</b> (${fmtMomEn(trend8)}) as the new baseline. The divergence—<b>8 GB</b> declining (${fmtMomEn(trend8)}) while high-capacity surges (<b>12 GB</b> ${fmtMomEn(trend12)}, <b>16 GB</b> ${fmtMomEn(trend16)})—signals a complete generational transition in PC gaming hardware.`;
-            } else if (highCapUp && trend8 < 0 && highCap > 35) {
-              txt = `${monthStr} survey shows accelerating high-capacity adoption: <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}) and <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}) now combine for <b>${highCap}%</b>, approaching mainstream status. <b>8 GB</b>, declining to <b>${v8_cur}%</b> (${fmtMomEn(trend8)}), is steadily exiting new-build configurations. Demanding AAA titles and 4K high-refresh gaming have made this upgrade cycle irreversible.`;
-            } else if (allDown) {
-              txt = `${monthStr} data shows capacity-tier adjustment across the board: <b>8 GB</b> at <b>${v8_cur}%</b> (${fmtMomEn(trend8)}), <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}), <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}). Distribution stabilizes as new GPU launches and game-release cycles create periodic swings in hardware replacement demand.`;
-            } else if (allUp && highCapUp) {
-              txt = `${monthStr} shows broad-based growth: <b>8 GB</b> at <b>${v8_cur}%</b> (${fmtMomEn(trend8)}), <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}), <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}), with high-capacity total at <b>${highCap}%</b>. This indicates the balance between new hardware adoption and legacy-device retirement has decisively shifted toward next-gen configurations.`;
-            } else if (trend8 < -0.3) {
-              txt = `${monthStr} underscores <b>8 GB</b> VRAM's accelerating decline: now <b>${v8_cur}%</b> (${fmtMomEn(trend8)}), with sharp downward momentum. <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}) and <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}) ascend in tandem. Even entry-level gamers increasingly opt for higher-tier GPUs to future-proof against forthcoming AAA demands.`;
-            } else {
-              txt = `${monthStr} survey reveals <b>8 GB</b> remains the plurality at <b>${v8_cur}%</b> (${fmtMomEn(trend8)}) but is ${trend8 < 0 ? "ebbing" : (trend8 > 0 ? "stabilizing" : "flat")}. <b>12 GB</b> at <b>${v12_cur}%</b> (${fmtMomEn(trend12)}) and <b>16 GB</b> at <b>${v16_cur}%</b> (${fmtMomEn(trend16)}) combine for <b>${highCap}%</b>—a persistent upgrade cycle as gamers chase 4K and high-refresh gaming alongside demanding, VRAM-hungry titles.`;
+            let txt = "Across the series since " + firstMonth + ", ";
+            txt += since && prevLeader
+              ? "<b>" + lead.name + "</b> overtook <b>" + prevLeader + "</b> for the top spot in <b>" + since + "</b> and now stands at <b>" + fmtP(lead.v) + "</b> (" + fmtChgEn(leadMom) + " MoM)"
+              : "<b>" + lead.name + "</b> has held first place throughout and now stands at <b>" + fmtP(lead.v) + "</b> (" + fmtChgEn(leadMom) + " MoM)";
+            if (second) txt += ", <b>" + (lead.v - second.v).toFixed(2) + "pt</b> ahead of <b>" + second.name + "</b> (" + fmtP(second.v) + ", " + fmtChgEn(secondMom) + " MoM)";
+            txt += ". ";
+            if (leadArc) txt += "Since the series began, " + leadArc.name + " has gone from " + fmtP(leadArc.from) + " to " + fmtP(leadArc.to) + " (" + pt(leadArc.d) + ")";
+            if (secondArc) txt += " and " + secondArc.name + " from " + fmtP(secondArc.from) + " to " + fmtP(secondArc.to) + " (" + pt(secondArc.d) + ")";
+            if (faller && faller.name !== lead.name && faller.name !== (second && second.name)) {
+              txt += "; the steepest fall is <b>" + faller.name + "</b> (" + fmtP(faller.from) + " to " + fmtP(faller.to) + ", " + pt(faller.d) + ")";
             }
-
+            txt += ". ";
+            const up = bigNow > bigThen;
+            txt += "The whole ladder has stepped " + (up ? "up" : "down") + ": <b>16 GB and above</b> has moved from " + fmtP(bigThen) + " to <b>" + fmtP(bigNow) + "</b>, while <b>6 GB and below</b> has moved from " + fmtP(smallThen) + " to <b>" + fmtP(smallNow) + "</b>.";
             return txt;
           }
         }
