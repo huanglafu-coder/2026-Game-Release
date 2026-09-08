@@ -14032,6 +14032,18 @@
     /* =========================================================
        Auto Insight — data-driven text matching May-2026 narrative style
     ========================================================= */
+    // Hand-written, fact-checked p4 analyses, keyed by month. These cite individual
+    // GPU models and the laptop-vs-desktop split, which `D` cannot supply (D.gpus is
+    // desktop-only and carries no VRAM field), so they are pinned rather than
+    // generated. A month with no entry falls through to the generated text in
+    // autoInsight(). Figures come from that month's scrape of Steam's videocard page.
+    const P4_INSIGHT = {
+      "2026-08": {
+        zh: "顯存主流門檻已完成換代：16 GB 自 7 月超車後續居第一，本月 <b>26.92%</b>（MoM ▲1.02%），對 8 GB <b>25.74%</b>（▲0.42%）的領先由 0.58pp 擴大至 1.18pp，16 GB 以上級距合計 <b>36.16%</b>（▲0.89%）。就機種結構而言，16 GB 對應 RTX 5070 Ti（1.82%）、RTX 5080（1.71%）、RX 9070 XT（1.46%）等中高階卡，以及 RTX 5060 Ti（2.55%）、RX 9060 XT（0.80%）的 16 GB 版本；8 GB 則對應 RTX 4060 Laptop（3.84%）、RTX 4060（3.60%）、RTX 5060（3.16%）這批入門主力——市場已形成「<b>入門 8 GB／主流 16 GB</b>」的雙峰結構。<br><br>8 GB 本月結束連續 11 個月下滑、首度回升，直接對應筆電端的擴張：<b>RTX 5060 Laptop（2.66%，▲0.47%）與 RTX 4060 Laptop（3.84%，▲0.20%）是全清單漲幅最大的兩張卡，且皆為 8 GB</b>。本月變動幾乎全由筆電貢獻——筆電 GPU 合計 15.11%（▲0.98pp），桌機獨顯合計 66.76%（▼0.17pp）。12 GB 停在 <b>12.99%</b>（▲0.11%）近乎不動，RTX 5070（3.77%，▲0.15%）的新增被 RTX 4070 家族（4.19%，▲0.01%）的停滯稀釋。退場的是 6 GB 以下：6 GB ▼0.35%、4 GB ▼0.25%、2 GB ▼0.41%，對應 GTX 1650（2.49%，▼0.12%，全清單最大跌幅）與 GTX 1660 系列的下線。<br><span style=\"font-size:13px;color:var(--ink60)\">註：顯存統計母體含內顯回報的共享記憶體與未進榜機種，且 RTX 5060 Ti、RX 9060 XT 等雙版本卡無法拆分，級距的月變化不宜逐卡歸因——16 GB 本月 ▲1.02pp 中，可明確歸屬的獨顯僅 ▲0.15pp。</span>",
+        en: "The mainstream VRAM threshold has completed its generational shift. 16 GB, which took the lead in July, holds first place at <b>26.92%</b> (MoM ▲1.02%); its margin over 8 GB at <b>25.74%</b> (▲0.42%) has widened from 0.58pp to 1.18pp, and tiers of 16 GB and above now total <b>36.16%</b> (▲0.89%). Structurally, 16 GB corresponds to mid-to-high-end cards — RTX 5070 Ti (1.82%), RTX 5080 (1.71%), RX 9070 XT (1.46%) — plus the 16 GB variants of the RTX 5060 Ti (2.55%) and RX 9060 XT (0.80%), while 8 GB corresponds to entry-level volume: RTX 4060 Laptop (3.84%), RTX 4060 (3.60%) and RTX 5060 (3.16%). The market has settled into a twin-peak structure of <b>8 GB at entry level and 16 GB in the mainstream</b>.<br><br>8 GB has ended an eleven-month slide and risen for the first time this month, which maps directly onto laptop expansion: <b>the RTX 5060 Laptop (2.66%, ▲0.47%) and RTX 4060 Laptop (3.84%, ▲0.20%) are the two largest gainers in the entire list, and both are 8 GB</b>. Almost all of this month's movement came from laptops — laptop GPUs total 15.11% (▲0.98pp) while desktop discrete GPUs total 66.76% (▼0.17pp). 12 GB is essentially static at <b>12.99%</b> (▲0.11%), the RTX 5070's growth (3.77%, ▲0.15%) diluted by a flat RTX 4070 family (4.19%, ▲0.01%). What is exiting is 6 GB and below — 6 GB ▼0.35%, 4 GB ▼0.25%, 2 GB ▼0.41% — matching the retirement of the GTX 1650 (2.49%, ▼0.12%, the largest decline in the list) and the GTX 1660 series.<br><span style=\"font-size:13px;color:var(--ink60)\">Note: Steam's VRAM figures cover a different population from the GPU list — they include shared memory reported by integrated graphics and cards below the listing threshold, and dual-capacity SKUs such as the RTX 5060 Ti and RX 9060 XT cannot be separated. Monthly tier changes should therefore not be attributed card by card: of 16 GB's ▲1.02pp this month, only ▲0.15pp is traceable to individually identifiable discrete cards.</span>",
+      },
+    };
+
     function autoInsight(key) {
       const zh = LANG === "zh-tw";
       const fmtP = v => v != null ? v.toFixed(2) + "%" : "-";
@@ -14115,6 +14127,8 @@
 
       /* ── p4: VRAM & Display ── */
       if (key === "p4_ins") {
+        const _pin = P4_INSIGHT[ACTIVE_MONTH];
+        if (_pin) return zh ? _pin.zh : (_pin.en || _pin.zh);
         const vd = sliceTrend(D.vramTrend, ACTIVE_MONTH);
         const dd = sliceTrend(D.displayTrend, ACTIVE_MONTH);
         if (vd.length && dd.length) {
@@ -14125,15 +14139,15 @@
           const td1 = dSorted[0];
           const td2 = dSorted[1];
           if (zh) {
-            let txt = `顯存規格正發生結構性位移：傳統的 <b>${tv.cat} VRAM</b> (${fmtP(tv.m5)}) 為最大宗，MoM ${fmtChg(tv.mom)}；`;
-            if (v2) txt += `而 <b>${v2.cat} VRAM</b> (${fmtP(v2.m5)}) ${v2.mom > 0 ? "正高速追趕，MoM 大幅增長" : "MoM"} ${fmtChg(v2.mom)}。`;
+            let txt = `顯存規格持續向上位移：<b>${tv.cat} VRAM</b>（${fmtP(tv.m5)}）為最大宗，MoM ${fmtChg(tv.mom)}；`;
+            if (v2) txt += `<b>${v2.cat} VRAM</b>（${fmtP(v2.m5)}）居次，MoM ${fmtChg(v2.mom)}，兩者差距 ${(tv.m5 - v2.m5).toFixed(2)}pp。`;
             txt += `在解析度方面，<b>${td1.cat}</b> (${fmtP(td1.m5)}) 為主流`;
             if (td2) txt += `，<b>${td2.cat}</b> 以 <b>${fmtP(td2.m5)}</b> 穩居第二`;
             txt += `，玩家對於高解析度與大顯存的需求持續增長。`;
             return txt;
           } else {
-            let txt = `VRAM specs are undergoing a structural shift: <b>${tv.cat} VRAM</b> (${fmtP(tv.m5)}) is the largest segment, ${fmtChgEn(tv.mom)} MoM; `;
-            if (v2) txt += `while <b>${v2.cat} VRAM</b> (${fmtP(v2.m5)}) is ${v2.mom > 0 ? "catching up fast, " : ""}${fmtChgEn(v2.mom)} MoM. `;
+            let txt = `VRAM specs keep shifting upward: <b>${tv.cat} VRAM</b> (${fmtP(tv.m5)}) is the largest segment, ${fmtChgEn(tv.mom)} MoM; `;
+            if (v2) txt += `<b>${v2.cat} VRAM</b> (${fmtP(v2.m5)}) is second, ${fmtChgEn(v2.mom)} MoM, ${(tv.m5 - v2.m5).toFixed(2)}pp behind. `;
             txt += `For resolution, <b>${td1.cat}</b> (${fmtP(td1.m5)}) is mainstream`;
             if (td2) txt += `, with <b>${td2.cat}</b> holding second at <b>${fmtP(td2.m5)}</b>`;
             txt += ` — demand for higher resolution and larger VRAM continues to grow.`;
