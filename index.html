@@ -8406,18 +8406,18 @@
     "usd": "US$49.99",
     "ntd": "NT$1,690",
     "rt": true,
-    "dlss": false,
+    "dlss": true,
     "rec": true,
     "hasRealContent": true,
     "desc": "魔獸世界全新資料片，故事回歸精靈族的故鄉 Quel'Thalas，面對暗夜君王 Void 的侵噬。Battle.net 獨佔發行，預計大幅翻新舊世界地圖並引入新職業機制，是暴雪自《決戰艾澤拉斯》後最大膽的系統重構。",
     "desc_en": "WoWs new expansion returns to the elven homeland of Quellthalas as the Void looms. Battle.net exclusive; expected to revamp legacy world maps and introduce new class mechanics — Blizzards boldest systemic overhaul since Battle for Azeroth.",
     "market_analysis": "WoW 仍是 MMORPG 市場基石，資料片週期性帶動大量回歸玩家。Battle.net 獨佔限制 Steam 曝光，但核心玩家黏性極強。",
     "market_analysis_en": "WoW remains the MMORPG market cornerstone; expansion cycles reliably drive returning player surges. Battle.net exclusivity limits Steam visibility, but core player retention is extremely strong.",
-    "rtx50_analysis": "現代 MMO 場景複雜度持續提升，RTX 5070 以上在最高設定可維持穩定 4K 幀率。暴雪目前尚未導入 DLSS/XeSS 支援，若日後加入將進一步提升效能表現。",
-    "rtx50_analysis_en": "Modern MMO scene complexity continues scaling; RTX 5070+ delivers stable 4K high-fps at max settings. Blizzard has not yet added DLSS/XeSS support — future adoption would further boost performance headroom.",
+    "rtx50_analysis": "現代 MMO 場景複雜度持續提升，RTX 5070 以上在最高設定可維持穩定 4K 幀率。暴雪已確認 DLSS 5 原生支援將於年底前推出（NVIDIA 驅動程式已預告），屆時將進一步提升效能表現。",
+    "rtx50_analysis_en": "Modern MMO scene complexity continues scaling; RTX 5070+ delivers stable 4K high-fps at max settings. Blizzard has confirmed native DLSS 5 support is coming by end of year (previewed in NVIDIA driver data), which will further boost performance headroom.",
     "rtx50_rec": "RTX 50 系列（對應官方 RTX 40 世代規格）",
     "rtx50_rec_en": "RTX 50 series (mapped from official RTX 40-gen spec)",
-    "dlss_text": "NO",
+    "dlss_text": "DLSS 5（官方確認年底前推出原生支援，NVIDIA 驅動程式已預告）",
     "spec_min": "GTX 10 series",
     "spec_rec": "RTX 40 series",
     "req_img": null,
@@ -8919,7 +8919,7 @@
     "usd": "$59.99",
     "ntd": "NT$1,790",
     "rt": false,
-    "dlss": false,
+    "dlss": true,
     "rec": true,
     "hasRealContent": true,
     "desc": "Arc System Works 以漫威英雄 IP 打造的格鬥遊戲，延續 Dragon Ball FighterZ 的動畫風格賽璐珞渲染技術，將蜘蛛人、金剛狼等漫威角色以日式動畫美學呈現。Marvel 大 IP 加持與 ArcSys 格鬥遊戲開發信譽，是格鬥遊戲市場 2026 年最受期待的大作之一。",
@@ -8930,7 +8930,7 @@
     "rtx50_analysis_en": "Fighting games are GPU-light; RTX 5060 achieves extreme framerates. Competitive players target 240fps+ for low-latency play — RTX 50-series delivers esports-grade framerates effortlessly.",
     "rtx50_rec": "RTX 5070（對應官方推薦規格 RTX 3070 效能級距）",
     "rtx50_rec_en": "RTX 5070 (mapped from recommended RTX 3070 tier)",
-    "dlss_text": "NO",
+    "dlss_text": "DLSS／FSR／XeSS（官方內建支援，含 Frame Generation；Day 1 更新修正預設誤開啟問題）",
     "spec_min": "RTX 2060 (6GB) / RX 6600 XT (8GB)",
     "spec_rec": "RTX 3070 (8GB) / RX 7600 XT (16GB)",
     "req_img": null,
@@ -16325,7 +16325,7 @@ function currentScopeGames() {
 // Report reference date — "即將上市" (upcoming) is judged against this fixed
 // anchor, not the live clock, so the snapshot stays stable when viewed later.
 // Update this when the report is regenerated.
-const REPORT_DATE = "2026-09-24";
+const REPORT_DATE = "2026-09-25";
 
 // Verified-scale tier: the market-heat recommendations backed by real Steam
 // review-count data (≥30K). Anything rec:true but NOT in this set is estimate-tier.
